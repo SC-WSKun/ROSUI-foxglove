@@ -1,0 +1,70 @@
+// Menu
+.ant-menu-inline .ant-menu-item {
+  margin: 4px 0;
+}
+
+// Popconfirm
+.ant-popconfirm-message-title {
+  letter-spacing: 2px;
+}
+
+// Form
+.ant-modal-body {
+  padding: 20px 20px 0 20px;
+}
+
+// link-button
+.ant-btn-link {
+  color: @theme-color3;
+  padding: 4px 6px;
+
+  &.ant-btn-dangerous {
+    color: @danger-color;
+  }
+
+  &:hover {
+    color: @theme-color4;
+  }
+
+  &:active {
+    color: @theme-color1;
+  }
+}
+
+// Table
+.ant-table-thead tr{
+  .ant-table-cell{
+    background: transparent !important;
+  }
+  background: #f7f7f7;
+}
+
+.ant-table-cell-row-hover {
+  background: rgba(@theme-color4, 0.05) !important;
+}
+
+// Steps
+.ant-steps-item-content{
+  margin-top: 5px !important;
+}
+
+// Spin
+.ant-spin-spinning{
+  width: 100vw;
+  z-index: 10000;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: rgba(255, 255, 255, .5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 20vh;
+}
+
+.ant-spin-text{
+  margin-top: 10px;
+  color: @theme-color1;
+}

@@ -1,0 +1,41 @@
+@theme-color-dark: #484e9c;
+@theme-color1: #8a90e5;
+@theme-color2: #7078df;
+@theme-color3: #5b63d3;
+@theme-color4: #5964f8;
+@main-background-color: #e8f2ff;
+@danger-color: #ff6969;
+@white-font-color: #fefefe;
+@black-font-color: #252a41;
+@gradient-color1: #6834E4;
+@gradient-color2: #87CBE4;
+
+@font-size-huge: 24px;
+@font-size-large: 20px;
+@font-size-middle: 18px;
+@font-size-normal: 16px;
+@font-size-small: 14px;
+
+@header-height: 60px;
+@menu-width: 250px; 
+
+.flex(@justifyContent: center, @alignItems: center, @direction: raw){
+    display: flex;
+    flex-direction: @direction;
+    justify-content: @justifyContent;
+    align-items: @alignItems;
+}
+
+// 滚动条
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track{
+    background-color: #dfdfdf;
+}
+
+::-webkit-scrollbar-thumb{
+    background-color: #acacac;
+    border-radius: 100px;
+}
