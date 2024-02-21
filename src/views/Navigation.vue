@@ -23,8 +23,12 @@
         </div>
         <div class="map" v-else>
           <div class="btn">
-            <a-button @click="addNavTask"> 添加导航地点 </a-button>
+            <a-button type="primary" v-if="state.adding" @click="finishAdding"
+              >完成</a-button
+            >
+            <a-button @click="addNavTask" v-else>指定初始位姿</a-button>
           </div>
+          <JoyStick></JoyStick>
         </div>
       </a-card>
     </div>
@@ -36,17 +40,26 @@
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useGlobalStore } from '@/stores/global'
 import { onMounted, reactive } from 'vue'
-import { type Map } from '@/typings'
+import { type GridMap, type Map } from '@/typings'
 import type { TableOptions } from '@/typings/component'
 import { drawGridMap } from '@/utils/draw'
-import { pzAddListener, pzRemoveListener } from '@/utils/draw'
+import type { MessageData } from '@foxglove/ws-protocol'
+import {
+  pzAddListener,
+  pzRemoveListener,
+  navAddListener,
+  navRemoveListener
+} from '@/utils/draw'
 import { type PanzoomObject } from '@panzoom/panzoom'
+import { notification } from 'ant-design-vue'
 
 interface State {
   maps: Map[]
   selectedMap: undefined | Map
   panzoomIns: PanzoomObject | undefined
-  img: undefined | HTMLImageElement
+  imgWrap: undefined | HTMLElement
+  adding: boolean
+  mapSubId: number
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -56,7 +69,9 @@ const state = reactive<State>({
   maps: [],
   selectedMap: undefined,
   panzoomIns: undefined,
-  img: undefined
+  imgWrap: undefined,
+  adding: false,
+  mapSubId: -1
 })
 
 const tabelOptions: TableOptions = {
@@ -84,9 +99,9 @@ const tabelOptions: TableOptions = {
           .then((res) => {
             console.log(res)
             const wrap = document.getElementById('navigationMap') as HTMLElement
-            const { panzoomIns, img } = drawGridMap(wrap, res.map, true)
+            const { panzoomIns, imgWrap } = drawGridMap(wrap, res.map, true)
             state.panzoomIns = panzoomIns
-            state.img = img
+            state.imgWrap = imgWrap
             globalStore.setLoading(false)
           })
           .catch((err) => {
@@ -116,11 +131,72 @@ const listMaps = () => {
 
 const addNavTask = () => {
   state.panzoomIns?.reset()
+  state.adding = true
   pzRemoveListener()
-  // console.log(state.panzoomIns?.getTransformOrigin());
-  // state.panzoomIns?.moveTo(0, 0)
-  // state.panzoomIns?.zoomTo(0, 0, 0.5)
-  // console.log(state.panzoomIns?.getTransform());
+  navAddListener()
+}
+
+const finishAdding = () => {
+  state.adding = false
+  pzAddListener()
+  navRemoveListener()
+  globalStore.setLoading(true)
+  foxgloveClientStore
+    .callService('/tiered_nav_state_machine/switch_mode', {
+      mode: 2
+    })
+    .then((res) => {
+      console.log(res)
+      foxgloveClientStore
+        .callService('/tiered_nav_state_machine/load_map', {
+          p: {
+            map_name: state.selectedMap?.map_name,
+            t: {
+              translation: {
+                x: 300,
+                y: 300,
+                z: 0
+              },
+              rotation: {
+                x: 0,
+                y: 0,
+                z: 0,
+                w: 1
+              }
+            }
+          }
+        })
+        .then((res1) => {
+          console.log('res1', res1)
+          foxgloveClientStore.subscribeTopic('/map').then((res2) => {
+            globalStore.setLoading(false)
+            state.mapSubId = res2
+            notification.success({
+              placement: 'topRight',
+              message:
+                '请通过【右下角摇杆】 或 键盘的【上下左右键】进行操控小车',
+              duration: 3
+            })
+            foxgloveClientStore.listenMessage(mapMsgHandler)
+          })
+        })
+    })
+}
+
+const mapMsgHandler = ({
+  op,
+  subscriptionId,
+  timestamp,
+  data
+}: MessageData) => {
+  if (state.mapSubId === subscriptionId) {
+    const parseData = foxgloveClientStore.readMsgWithSubId(
+      state.mapSubId,
+      data
+    ) as GridMap
+    const wrap = document.getElementById('navigationMap') as HTMLElement
+    drawGridMap(wrap, parseData)
+  }
 }
 
 onMounted(() => {})

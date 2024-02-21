@@ -1,15 +1,19 @@
 import type { GridMap } from '@/typings'
 import Panzoom, { type PanzoomObject } from '@panzoom/panzoom'
 import { message } from 'ant-design-vue'
+import arrowImage from '@/assets/arrow.png';
 
 let panzoomIns: PanzoomObject | null = null
+let imgWrap: HTMLElement | null = null
 let img: HTMLImageElement | null = null
+let arrow: HTMLImageElement | null = null
+let addingNav: boolean = false
 
 export const drawGridMap = (
   wrap: Element | null,
   data: GridMap,
   pz: boolean = false
-): { panzoomIns?: PanzoomObject; img: HTMLImageElement } => {
+): { panzoomIns?: PanzoomObject; imgWrap: HTMLElement } => {
   if (!wrap) {
     message.error('wrap not exist')
     throw new Error('wrap not exist')
@@ -39,32 +43,42 @@ export const drawGridMap = (
   }
   ctx.putImageData(imgData, 0, 0)
   img = new Image()
+  imgWrap = document.createElement('div')
   if (wrap?.clientWidth! / wrap?.clientHeight! > canvas.width / canvas.height) {
     img.height = wrap?.clientHeight!
+    img.width = wrap?.clientHeight! * canvas.width / canvas.height
   } else {
     img.width = wrap?.clientWidth!
+    img.height = wrap?.clientWidth! * canvas.height / canvas.width
   }
   img.src = canvas.toDataURL('image/png')
-  wrap?.replaceChildren(img)
+  img.style.position = 'absolute'
+  console.log(img.naturalWidth, img.naturalHeight)
+  imgWrap.style.height = `${img.height}px`
+  imgWrap.style.width = `${img.width}px`
+
+  imgWrap.style.position = 'relative'
+  imgWrap.appendChild(img)
+  wrap?.replaceChildren(imgWrap)
 
   // 添加缩放和平移功能
   if (pz) {
-    return setPanzoom(img)
+    return setPanzoom(imgWrap)
   }
 
   return {
-    img
+    imgWrap
   }
 }
 
 // 为画布添加缩放和平移拖拽功能
 const setPanzoom = (
-  img: HTMLImageElement
+  imgWrap: HTMLElement
 ): {
-  img: HTMLImageElement
+  imgWrap: HTMLElement
   panzoomIns: PanzoomObject
 } => {
-  panzoomIns = Panzoom(img, {
+  panzoomIns = Panzoom(imgWrap, {
     // 限制缩放范围
     minScale: 0.8,
     maxScale: 3,
@@ -76,12 +90,13 @@ const setPanzoom = (
   pzAddListener()
 
   return {
-    img,
+    imgWrap,
     panzoomIns
   }
 }
 
 const handleMousedown: any = (event: PointerEvent) => {
+  // 鼠标左键
   if (event.button === 0) {
     panzoomIns!.handleDown(event)
   }
@@ -119,4 +134,54 @@ export const pzRemoveListener = () => {
   img?.removeEventListener('mouseup', handleMouseup)
   img?.removeEventListener('mouseleave', handleMouseleave)
   img?.removeEventListener('wheel', panzoomIns!.zoomWithWheel)
+}
+
+const navHandleMousedown: any = (event: PointerEvent) => {
+  console.log(event.offsetX, event.offsetY)
+  event.preventDefault()
+  addingNav = true
+  arrow = document.createElement('img') as HTMLImageElement
+  arrow.src = arrowImage
+  if(!arrow) return
+  arrow.className = 'arrow'
+  arrow.style.position = 'absolute'
+  arrow.style.pointerEvents = 'none'
+  arrow.style.width = '10px'
+  arrow.style.height = '10px'
+  arrow.style.left = `${event.offsetX - 5}px`
+  arrow.style.top = `${event.offsetY - 10}px`
+  arrow.style.transformOrigin = '50% 100%'
+  const prevArrow = imgWrap?.querySelector('.arrow')
+  if (prevArrow) {
+    imgWrap?.removeChild(prevArrow)
+  }
+  imgWrap?.appendChild(arrow)
+}
+
+const navHandleMousemove: any = (event: PointerEvent) => {
+  if (addingNav && arrow) {
+    const deltaX = event.offsetX - parseInt(arrow.style.left)
+    const deltaY = event.offsetY - parseInt(arrow.style.top)
+    let length = Math.round(Math.sqrt(deltaX * deltaX + deltaY * deltaY))
+    length = length > 10 ? length : 10
+    const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI
+    arrow.style.transform = `rotate(${angle + 90}deg) scaleY(${length / 10}) scaleX(${length / 30})`
+  }
+}
+
+const navHandleMouseup: any = (event: PointerEvent) => {
+  addingNav = false
+}
+
+export const navAddListener = () => {
+  pzRemoveListener()
+  img?.addEventListener('mousedown', navHandleMousedown)
+  img?.addEventListener('mousemove', navHandleMousemove)
+  img?.addEventListener('mouseup', navHandleMouseup)
+}
+
+export const navRemoveListener = () => {
+  img?.removeEventListener('mousedown', navHandleMousedown)
+  img?.removeEventListener('mousemove', navHandleMousemove)
+  img?.removeEventListener('mouseup', navHandleMouseup)
 }

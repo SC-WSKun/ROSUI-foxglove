@@ -64,5 +64,11 @@ export default {
       const name = key.slice(key.lastIndexOf('/') + 1, key.lastIndexOf('.'))
       app.component(name, defineAsyncComponent(value as any))
     }
+
+    const customIcons = import.meta.glob('@/icons/*.vue')
+    for (const [key, value] of Object.entries(customIcons)) {
+      const name = key.slice(key.lastIndexOf('/') + 1, key.lastIndexOf('.'))
+      app.component(name, defineAsyncComponent(value as any))
+    }
   }
 }
