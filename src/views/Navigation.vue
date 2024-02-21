@@ -42,24 +42,19 @@ import { useGlobalStore } from '@/stores/global'
 import { onMounted, reactive } from 'vue'
 import { type GridMap, type Map } from '@/typings'
 import type { TableOptions } from '@/typings/component'
-import { drawGridMap } from '@/utils/draw'
 import type { MessageData } from '@foxglove/ws-protocol'
-import {
-  pzAddListener,
-  pzRemoveListener,
-  navAddListener,
-  navRemoveListener
-} from '@/utils/draw'
+import DrawManage from '@/utils/draw'
 import { type PanzoomObject } from '@panzoom/panzoom'
 import { notification } from 'ant-design-vue'
 
 interface State {
   maps: Map[]
-  selectedMap: undefined | Map
-  panzoomIns: PanzoomObject | undefined
-  imgWrap: undefined | HTMLElement
+  selectedMap: Map | null
+  panzoomIns: PanzoomObject | null
+  imgWrap: HTMLElement | null
   adding: boolean
   mapSubId: number
+  drawManage: DrawManage
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -67,11 +62,12 @@ const globalStore = useGlobalStore()
 
 const state = reactive<State>({
   maps: [],
-  selectedMap: undefined,
-  panzoomIns: undefined,
-  imgWrap: undefined,
+  selectedMap: null,
+  panzoomIns: null,
+  imgWrap: null,
   adding: false,
-  mapSubId: -1
+  mapSubId: -1,
+  drawManage: new DrawManage()
 })
 
 const tabelOptions: TableOptions = {
@@ -99,9 +95,9 @@ const tabelOptions: TableOptions = {
           .then((res) => {
             console.log(res)
             const wrap = document.getElementById('navigationMap') as HTMLElement
-            const { panzoomIns, imgWrap } = drawGridMap(wrap, res.map, true)
-            state.panzoomIns = panzoomIns
-            state.imgWrap = imgWrap
+            state.drawManage.drawGridMap(wrap, res.map, true)
+            state.panzoomIns = state.drawManage.panzoomIns
+            state.imgWrap = state.drawManage.imgWrap
             globalStore.setLoading(false)
           })
           .catch((err) => {
@@ -132,14 +128,14 @@ const listMaps = () => {
 const addNavTask = () => {
   state.panzoomIns?.reset()
   state.adding = true
-  pzRemoveListener()
-  navAddListener()
+  state.drawManage.pzRemoveListener()
+  state.drawManage.navAddListener()
 }
 
 const finishAdding = () => {
   state.adding = false
-  pzAddListener()
-  navRemoveListener()
+  state.drawManage.pzAddListener()
+  state.drawManage.navRemoveListener()
   globalStore.setLoading(true)
   foxgloveClientStore
     .callService('/tiered_nav_state_machine/switch_mode', {
@@ -153,8 +149,8 @@ const finishAdding = () => {
             map_name: state.selectedMap?.map_name,
             t: {
               translation: {
-                x: 300,
-                y: 300,
+                x: 110,
+                y: 110,
                 z: 0
               },
               rotation: {
@@ -195,7 +191,7 @@ const mapMsgHandler = ({
       data
     ) as GridMap
     const wrap = document.getElementById('navigationMap') as HTMLElement
-    drawGridMap(wrap, parseData)
+    state.drawManage.drawGridMap(wrap, parseData)
   }
 }
 

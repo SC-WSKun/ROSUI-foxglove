@@ -76,13 +76,14 @@ import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useGlobalStore } from '@/stores/global'
 import type { MessageData } from '@foxglove/ws-protocol'
 import type { GridMap } from '@/typings'
-import { drawGridMap } from '@/utils/draw'
+import DrawManage from '@/utils/draw'
 
 interface State {
   building: boolean
   mapSubId: number
   pause: boolean
   finish: boolean
+  drawManage: DrawManage
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -94,7 +95,8 @@ const state = reactive<State>({
   building: false,
   mapSubId: -1,
   pause: false,
-  finish: false
+  finish: false,
+  drawManage: new DrawManage()
 })
 
 const mapMsgHandler = ({
@@ -109,7 +111,7 @@ const mapMsgHandler = ({
       data
     ) as GridMap
     const wrap = document.querySelector('#buildMap')
-    drawGridMap(wrap, parseData)
+    state.drawManage.drawGridMap(wrap, parseData)
   }
 }
 
