@@ -6,6 +6,7 @@
 import nipplejs from 'nipplejs'
 import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
+import { notification } from 'ant-design-vue';
 
 interface State {
   manager: nipplejs.JoystickManager | null
@@ -147,6 +148,12 @@ onMounted(() => {
     // keyboard mode control
     document.addEventListener('keydown', handleKeydown)
     document.addEventListener('keyup', handleKeyup)
+
+    notification.success({
+      placement: 'topRight',
+      message: '请通过【右下角摇杆】 或 键盘的【上下左右键】进行操控小车',
+      duration: 3
+    })
   })
 })
 

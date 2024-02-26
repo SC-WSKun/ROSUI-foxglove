@@ -10,10 +10,7 @@
         style="width: 100%; height: 100%"
       >
         <div class="select" v-if="!state.selectedMap">
-          <div class="btn" v-if="!state.maps.length">
-            <a-button @click="listMaps"> 获取地图列表 </a-button>
-          </div>
-          <div class="list" v-else>
+          <div class="list">
             <Table
               :tableOptions="tabelOptions"
               :dataSource="state.maps"
@@ -22,13 +19,13 @@
           </div>
         </div>
         <div class="map" v-else>
-          <div class="btn">
+          <div class="btn" v-if="!state.initFinish">
             <a-button type="primary" v-if="state.adding" @click="finishAdding"
               >完成</a-button
             >
             <a-button @click="addNavTask" v-else>指定初始位姿</a-button>
           </div>
-          <JoyStick></JoyStick>
+          <JoyStick v-else></JoyStick>
         </div>
       </a-card>
     </div>
@@ -55,6 +52,8 @@ interface State {
   adding: boolean
   mapSubId: number
   drawManage: DrawManage
+  initFinish: boolean
+  goalChannelId: number | undefined
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -67,7 +66,9 @@ const state = reactive<State>({
   imgWrap: null,
   adding: false,
   mapSubId: -1,
-  drawManage: new DrawManage()
+  drawManage: new DrawManage(),
+  initFinish: false,
+  goalChannelId: undefined
 })
 
 const tabelOptions: TableOptions = {
@@ -111,7 +112,7 @@ const tabelOptions: TableOptions = {
 }
 
 const listMaps = () => {
-  globalStore.setLoading(true)
+  globalStore.setLoading(true, '地图列表加载中')
   // 获取地图列表
   foxgloveClientStore
     .callService('/tiered_nav_conn_graph/list_maps', {})
@@ -130,6 +131,11 @@ const addNavTask = () => {
   state.adding = true
   state.drawManage.pzRemoveListener()
   state.drawManage.navAddListener()
+  notification.success({
+    placement: 'topRight',
+      message: '请在地图按下并拖动鼠标来指定初始位姿',
+      duration: 3
+  })
 }
 
 const finishAdding = () => {
@@ -148,17 +154,8 @@ const finishAdding = () => {
           p: {
             map_name: state.selectedMap?.map_name,
             t: {
-              translation: {
-                x: 110,
-                y: 110,
-                z: 0
-              },
-              rotation: {
-                x: 0,
-                y: 0,
-                z: 0,
-                w: 1
-              }
+              translation: state.drawManage.navTranslation,
+              rotation: state.drawManage.navRotation
             }
           }
         })
@@ -166,15 +163,11 @@ const finishAdding = () => {
           console.log('res1', res1)
           foxgloveClientStore.subscribeTopic('/map').then((res2) => {
             globalStore.setLoading(false)
+            state.initFinish = true
             state.mapSubId = res2
-            notification.success({
-              placement: 'topRight',
-              message:
-                '请通过【右下角摇杆】 或 键盘的【上下左右键】进行操控小车',
-              duration: 3
-            })
             foxgloveClientStore.listenMessage(mapMsgHandler)
           })
+          state.drawManage.launchNavigation()
         })
     })
 }
@@ -190,12 +183,17 @@ const mapMsgHandler = ({
       state.mapSubId,
       data
     ) as GridMap
+    console.log(parseData)
+
     const wrap = document.getElementById('navigationMap') as HTMLElement
     state.drawManage.drawGridMap(wrap, parseData)
+    foxgloveClientStore.unSubscribeTopic(state.mapSubId)
   }
 }
 
-onMounted(() => {})
+onMounted(() => {
+  listMaps()
+})
 </script>
 
 <style lang="less" scoped>

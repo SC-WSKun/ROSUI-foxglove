@@ -214,8 +214,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     })
   }
 
-  function serviceResponseHandler() {}
-
   /**
    * advertise topic
    * @param channel channel to be advertised

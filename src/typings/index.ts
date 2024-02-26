@@ -36,26 +36,30 @@ export interface GridMap {
       sec: number
     }
   }
-  info: {
-    width: number
-    height: number
-    resolution: number
-    origin: {
-      position: {
-        x: number
-        y: number
-        z: number
-      }
-      orientation: {
-        w: number
-        x: number
-        y: number
-        z: number
-      }
+  info: MapInfo
+}
+
+export interface MapInfo {
+  width: number
+  height: number
+  resolution: number
+  origin: {
+    position: {
+      x: number
+      y: number
+      z: number
     }
-    map_load_time: {
-      nsec: number
-      sec: number
-    }
+    orientation: Quaternion
   }
+  map_load_time: {
+    nsec: number
+    sec: number
+  }
+}
+
+export type Quaternion = {
+  w: number
+  x: number
+  y: number
+  z: number
 }

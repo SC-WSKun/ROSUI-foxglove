@@ -123,11 +123,7 @@ const subscribeMapTopic = () => {
       state.building = true
       state.pause = false
       state.finish = false
-      notification.success({
-        placement: 'topRight',
-        message: '请通过【右下角摇杆】 或 键盘的【上下左右键】进行操控小车',
-        duration: 3
-      })
+
       foxgloveClientStore.listenMessage(mapMsgHandler)
     })
     .catch((err: string) => {
