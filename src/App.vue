@@ -22,16 +22,12 @@ import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { RouterView } from 'vue-router'
 import { useGlobalStore } from './stores/global'
 import { nextTick, onMounted, ref, type Ref } from 'vue'
-import type ModalVue from './base/Modal.vue';
 
 const globalStore = useGlobalStore()
 
 const modalRef: any = ref(null)
-console.log(modalRef);
-
 
 onMounted(() => {
-  console.log(modalRef.value)
   globalStore.setModalRef(modalRef.value)
 })
 </script>

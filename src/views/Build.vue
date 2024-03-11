@@ -99,6 +99,7 @@ const state = reactive<State>({
   drawManage: new DrawManage()
 })
 
+// 地图消息监听回调
 const mapMsgHandler = ({
   op,
   subscriptionId,
@@ -115,6 +116,7 @@ const mapMsgHandler = ({
   }
 }
 
+// 订阅地图消息
 const subscribeMapTopic = () => {
   foxgloveClientStore
     .subscribeTopic('/map')
@@ -131,6 +133,7 @@ const subscribeMapTopic = () => {
     })
 }
 
+// 启动建图模式
 const launchBuild = () => {
   if (!state.building) {
     modalRef.value.openModal({
@@ -181,6 +184,7 @@ const launchBuild = () => {
   }
 }
 
+// 建图暂停/继续
 const switchBuild = () => {
   if (state.pause) {
     state.pause = false
@@ -193,6 +197,7 @@ const switchBuild = () => {
   }
 }
 
+// 终止建图模式
 const finishBuild = () => {
   state.finish = true
   state.building = false
@@ -202,6 +207,7 @@ const finishBuild = () => {
   message.success('建图完成')
 }
 
+// 保存地图
 const saveMap = () => {
   console.log('save', globalStore.state.modalRef)
   modalRef.value.openModal({

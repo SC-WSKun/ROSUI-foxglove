@@ -62,7 +62,8 @@ const modalState: ModalState = reactive({
   width: undefined,
   showFooter: true,
   showMessage: true,
-  content: undefined
+  content: undefined,
+  closeModal: undefined
 })
 
 let propsData: any = undefined
@@ -86,7 +87,8 @@ const openModal = (modalOptions: ModalOptions) => {
     width,
     showFooter,
     showMessage,
-    content
+    content,
+    closeModal
   } = modalOptions
   modalState.title = title
   modalState.type = type || 'normal'
@@ -98,6 +100,7 @@ const openModal = (modalOptions: ModalOptions) => {
   modalState.showFooter = showFooter === undefined ? true : showFooter
   modalState.showMessage = showMessage === undefined ? true : showMessage
   modalState.content = content
+  modalState.closeModal = closeModal === undefined ? true : closeModal
   customComponent = component
   propsData = props
   
@@ -117,7 +120,7 @@ const openModal = (modalOptions: ModalOptions) => {
       if (callback)
         await callback(formRef?.value?.formFields || customRef?.value?.data)
       if (modalState.showMessage) message.success(doneMsg || '操作成功')
-      modalState.open = false
+      if(modalState.closeModal) modalState.open = false
     } catch (err) {
       console.error(err);
       return
@@ -126,12 +129,13 @@ const openModal = (modalOptions: ModalOptions) => {
   modalState.open = true
 }
 
-const handleCancel = () => {
+const closeModal = () => {
   modalState.open = false
 }
 
 defineExpose({
-  openModal
+  openModal,
+  closeModal
 })
 </script>
 

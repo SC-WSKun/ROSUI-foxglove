@@ -17,7 +17,7 @@ import Display from './Layout/Display.vue'
 <style lang="less" scoped>
   .Dashboard{
     width: 100vw;
-    min-width: 800px;
+    min-width: 1200px;
     height: 100vh;
 
     &-main{

@@ -47,8 +47,8 @@ const MAX_LINEAR = 15.0 // m/s
 const MAX_ANGULAR = 20.0 // rad/s
 const MAX_DISTANCE = 75.0 // pixels
 
+// 处理移动事件
 const handleMove = (linearSpeed: number, angularSpeed: number) => {
-  console.log(linearSpeed, angularSpeed)
   // publish message to server to move the robot
   foxgloveClientStore.publishMessage(state.channelId!, {
     linear: {
@@ -64,6 +64,7 @@ const handleMove = (linearSpeed: number, angularSpeed: number) => {
   })
 }
 
+// 摇杆blur事件
 const handleJoystickPause = () => {
   clearInterval(state.timer)
   state.timer = undefined
@@ -73,6 +74,7 @@ const handleJoystickPause = () => {
   state.stickActive = false
 }
 
+// 键盘监听事件
 const handleKeydown = (event: KeyboardEvent) => {
   if (state.stickActive) {
     handleJoystickPause()
@@ -98,6 +100,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   handleMove(state.linearSpeed, state.angularSpeed)
 }
 
+// 键盘松开事件
 const handleKeyup = (event: KeyboardEvent) => {
   switch (event.key) {
     case 'ArrowUp':

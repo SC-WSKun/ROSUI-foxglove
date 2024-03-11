@@ -12,7 +12,7 @@
         <div class="select" v-if="!state.selectedMap">
           <div class="list">
             <Table
-              :tableOptions="tabelOptions"
+              :tableOptions="tableOptions"
               :dataSource="state.maps"
               :loading="false"
             ></Table>
@@ -20,12 +20,15 @@
         </div>
         <div class="map" v-else>
           <div class="btn" v-if="!state.initFinish">
-            <a-button type="primary" v-if="state.adding" @click="finishAdding"
-              >完成</a-button
-            >
-            <a-button @click="addNavTask" v-else>指定初始位姿</a-button>
+            <a-button type="primary" v-if="state.adding" @click="finishAdding">
+              完成
+            </a-button>
+            <a-button @click="initPose" v-else>指定初始位姿</a-button>
           </div>
-          <JoyStick v-else></JoyStick>
+          <div class="btn" v-else>
+            <JoyStick></JoyStick>
+            <a-button @click="connectMap">连接地图</a-button>
+          </div>
         </div>
       </a-card>
     </div>
@@ -36,13 +39,13 @@
 <script setup lang="ts">
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useGlobalStore } from '@/stores/global'
-import { onMounted, reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { type GridMap, type Map } from '@/typings'
 import type { TableOptions } from '@/typings/component'
 import type { MessageData } from '@foxglove/ws-protocol'
 import DrawManage from '@/utils/draw'
 import { type PanzoomObject } from '@panzoom/panzoom'
-import { notification } from 'ant-design-vue'
+import { message, notification } from 'ant-design-vue'
 
 interface State {
   maps: Map[]
@@ -54,6 +57,7 @@ interface State {
   drawManage: DrawManage
   initFinish: boolean
   goalChannelId: number | undefined
+  connecting: boolean
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -68,10 +72,14 @@ const state = reactive<State>({
   mapSubId: -1,
   drawManage: new DrawManage(),
   initFinish: false,
-  goalChannelId: undefined
+  goalChannelId: undefined,
+  connecting: false
 })
 
-const tabelOptions: TableOptions = {
+const modalRef: any = ref(null)
+
+// 地图列表表格配置项
+const tableOptions: TableOptions = {
   items: [
     {
       title: '地图名称',
@@ -86,6 +94,9 @@ const tabelOptions: TableOptions = {
   actions: [
     {
       text: '选择',
+      disabled: (record: Map) => {
+        return record.map_name === state.selectedMap?.map_name
+      },
       callback: (record: Map) => {
         globalStore.setLoading(true, '加载地图中')
         state.selectedMap = record
@@ -95,6 +106,19 @@ const tabelOptions: TableOptions = {
           })
           .then((res) => {
             console.log(res)
+            if (state.connecting) {
+              modalRef.value.closeModal()
+              // 调用服务连接地图
+              // foxgloveClientStore
+              //   .callService(
+              //     '/tiered_nav_state_machine/add_cur_pose_as_edge',
+              //     {}
+              //   )
+              //   .then((res) => {
+              //     if (res === 0) message.success('连接成功')
+              //   })
+              message.success('连接成功')
+            }
             const wrap = document.getElementById('navigationMap') as HTMLElement
             state.drawManage.drawGridMap(wrap, res.map, true)
             state.panzoomIns = state.drawManage.panzoomIns
@@ -111,6 +135,7 @@ const tabelOptions: TableOptions = {
   actionWidth: 50
 }
 
+// 获取地图列表
 const listMaps = () => {
   globalStore.setLoading(true, '地图列表加载中')
   // 获取地图列表
@@ -126,18 +151,20 @@ const listMaps = () => {
     })
 }
 
-const addNavTask = () => {
+// 指定初始位姿
+const initPose = () => {
   state.panzoomIns?.reset()
   state.adding = true
   state.drawManage.pzRemoveListener()
   state.drawManage.navAddListener()
   notification.success({
     placement: 'topRight',
-      message: '请在地图按下并拖动鼠标来指定初始位姿',
-      duration: 3
+    message: '请在地图按下并拖动鼠标来指定初始位姿',
+    duration: 3
   })
 }
 
+// 完成初始位姿指定
 const finishAdding = () => {
   state.adding = false
   state.drawManage.pzAddListener()
@@ -172,6 +199,7 @@ const finishAdding = () => {
     })
 }
 
+// 地图消息监听回调
 const mapMsgHandler = ({
   op,
   subscriptionId,
@@ -187,12 +215,37 @@ const mapMsgHandler = ({
 
     const wrap = document.getElementById('navigationMap') as HTMLElement
     state.drawManage.drawGridMap(wrap, parseData)
-    foxgloveClientStore.unSubscribeTopic(state.mapSubId)
   }
 }
 
+// 连接地图
+const connectMap = () => {
+  modalRef.value.openModal({
+    title: '温馨提示',
+    type: 'normal',
+    content: '确定以当前位置作为地图连接点吗？',
+    callback: () => {
+      state.connecting = true
+      modalRef.value.openModal({
+        title: '选择地图',
+        type: 'table',
+        tableOptions,
+        dataSource: state.maps,
+        closeModal: false,
+        showMessage: false,
+        callback: () => {
+          modalRef.value.closeModal()
+        }
+      })
+    }
+  })
+}
+
 onMounted(() => {
-  listMaps()
+  globalStore.setLoading(true, '地图列表加载中')
+  setTimeout(() => {
+    listMaps()
+  }, 500)
 })
 </script>
 

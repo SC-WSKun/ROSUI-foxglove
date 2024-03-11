@@ -36,9 +36,7 @@
         </template>
         <template v-else-if="column.type === 'actions'">
           <template v-for="action in column.actions" :key="action.text">
-            <template
-              v-if="!action.showFilter || action.showFilter(record)"
-            >
+            <template v-if="!action.showFilter || action.showFilter(record)">
               <a-popconfirm
                 v-if="action.type === 'popconfirm'"
                 :title="action.title"
@@ -46,14 +44,18 @@
                 cancel-text="取消"
                 @confirm="action.callback(record)"
               >
-                <a-button type="link" :danger="action.danger">{{
-                  action.text
-                }}</a-button>
+                <a-button
+                  type="link"
+                  :danger="action.danger"
+                  :disabled="action.disabled && action.disabled(record)"
+                  >{{ action.text }}</a-button
+                >
               </a-popconfirm>
               <a-button
                 v-else
                 type="link"
                 :danger="action.danger"
+                :disabled="action.disabled && action.disabled(record)"
                 @click="action.callback(record)"
                 >{{ action.text }}</a-button
               >
@@ -64,7 +66,6 @@
           <div v-html="column.render(record)"></div>
         </template>
         <template v-else>
-          <!-- <span>{{ getByDictKey(record[column.dataIndex], column) }}</span> -->
           <span>{{
             getByDictKey(_.get(record, column.dataIndex), column)
           }}</span>
@@ -88,22 +89,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-// const data = computed(() => {
-//   let list: any[] = JSON.parse(JSON.stringify(props.dataSource))
-//   props.tableOptions.items.forEach((item: TableItem) => {
-//     if (item.dictIndex) {
-//       list = list.map((record: any) => {
-//         record[item.dataIndex] = _.get(
-//           Dict,
-//           `${item.dictIndex}.${record[item.dataIndex]}`
-//         )
-//         return record
-//       })
-//     }
-//   })
-//   return list
-// })
 
 const items = computed(() => {
   const { actions } = props.tableOptions

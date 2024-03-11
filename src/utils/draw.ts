@@ -25,12 +25,13 @@ export default class DrawManage {
   scale: number = 1 // 地图缩放比例
   foxgloveClientStore: any = null
   goalChannelId: number | undefined = undefined
-  goalSeq: number = 0
+  goalSeq: number = 0 // 导航点发布序号
 
   constructor() {
     this.foxgloveClientStore = useFoxgloveClientStore()
   }
 
+  // 将后端返回的map通过canvas进行转化并展示成img
   drawGridMap(wrap: Element | null, data: GridMap, pz: boolean = false) {
     if (!wrap) {
       message.error('wrap not exist')
@@ -39,7 +40,7 @@ export default class DrawManage {
     const canvas = document.createElement('canvas')
     canvas.id = 'map_canvas'
     this.mapInfo = data.info
-    console.log(this.mapInfo)
+    console.log('draw.ts - mapInfo', this.mapInfo)
 
     canvas.width = this.mapInfo.width
     canvas.height = this.mapInfo.height
@@ -62,6 +63,7 @@ export default class DrawManage {
     ctx.putImageData(imgData, 0, 0)
     // img标签展示地图
     this.img = new Image()
+    // 确保地图能够等比例完全展示
     if (
       wrap?.clientWidth! / wrap?.clientHeight! >
       canvas.width / canvas.height
@@ -73,17 +75,26 @@ export default class DrawManage {
       this.img.height = (wrap?.clientWidth! * canvas.height) / canvas.width
     }
     this.img.src = canvas.toDataURL('image/png')
+    // 地图缩放比例
     this.scale = this.mapInfo.width / this.img.width
 
     // imgWrap包含map和arrow
-    this.imgWrap = document.createElement('div')
-    this.imgWrap.style.position = 'relative'
+    if (!this.imgWrap) {
+      this.imgWrap = document.createElement('div')
+      this.imgWrap.style.position = 'relative'
+      wrap.appendChild(this.imgWrap)
+    }
     this.img.style.position = 'absolute'
+    this.img.id = 'map_img'
     this.imgWrap.style.height = `${this.img.height}px`
     this.imgWrap.style.width = `${this.img.width}px`
 
-    this.imgWrap.appendChild(this.img)
-    wrap?.replaceChildren(this.imgWrap)
+    const lastImg = document.querySelector('#map_img')
+    if (lastImg) {
+      this.imgWrap.replaceChild(this.img, lastImg)
+    } else {
+      this.imgWrap.appendChild(this.img)
+    }
 
     // 添加缩放和平移功能
     if (pz) {
@@ -91,7 +102,9 @@ export default class DrawManage {
     }
 
     // 启动导航点交互
-    if(this.goalChannelId !== undefined) {
+    if (this.goalChannelId !== undefined) {
+      // 优先移除地图交互监听，避免冲突
+      this.pzRemoveListener()
       this.navAddListener()
     }
   }
@@ -110,6 +123,7 @@ export default class DrawManage {
     this.pzAddListener()
   }
 
+  // 拖拽&缩放地图的鼠标事件监听
   handleMousedown: any = (event: PointerEvent) => {
     // 鼠标左键
     if (event.button === 0) {
@@ -135,6 +149,7 @@ export default class DrawManage {
     }
   }
 
+  // 添加地图交互事件监听
   pzAddListener() {
     this.img?.addEventListener('mousedown', this.handleMousedown)
     this.img?.addEventListener('mousemove', this.handleMousemove)
@@ -143,6 +158,7 @@ export default class DrawManage {
     this.img?.addEventListener('wheel', this.panzoomIns!.zoomWithWheel)
   }
 
+  // 移除地图交互事件监听
   pzRemoveListener() {
     this.img?.removeEventListener('mousedown', this.handleMousedown)
     this.img?.removeEventListener('mousemove', this.handleMousemove)
@@ -151,6 +167,7 @@ export default class DrawManage {
     this.img?.removeEventListener('wheel', this.panzoomIns!.zoomWithWheel)
   }
 
+  // 添加导航箭头的鼠标事件监听
   navHandleMousedown: any = (event: PointerEvent) => {
     event.preventDefault()
     this.addingNav = true
@@ -172,19 +189,17 @@ export default class DrawManage {
       return
     }
     // 像素坐标 -> 栅格坐标 -> 真实世界坐标
+    const { x, y } = pixelToWorldCoordinate(
+      event.offsetX,
+      event.offsetY,
+      this.scale,
+      this.mapInfo.resolution,
+      this.mapInfo.origin.position.x,
+      this.mapInfo.origin.position.y
+    )
     this.navTranslation = {
-      x: pixelToWorldCoordinate(
-        event.offsetX,
-        this.scale,
-        this.mapInfo.resolution,
-        this.mapInfo.origin.position.x
-      ),
-      y: pixelToWorldCoordinate(
-        event.offsetY,
-        this.scale,
-        this.mapInfo.resolution,
-        this.mapInfo.origin.position.y
-      ),
+      x,
+      y,
       z: 0
     }
     console.log('navTranslation', this.navTranslation)
@@ -203,9 +218,9 @@ export default class DrawManage {
       let length = Math.round(Math.sqrt(deltaX * deltaX + deltaY * deltaY))
       length = length > 1 ? length : 1
       const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI
-      this.arrow.style.transform = `translate(-50%, -100%) rotate(${angle + 90}deg) scaleY(${
-        length / 1
-      }) scaleX(${length / 4})`
+      this.arrow.style.transform = `translate(-50%, -100%) rotate(${
+        angle + 90
+      }deg) scaleY(${length / 1}) scaleX(${length / 4})`
     }
   }
 
@@ -216,16 +231,12 @@ export default class DrawManage {
       return
     }
     // 计算鼠标松开位置的真实世界坐标，同像素坐标 -> 栅格坐标 -> 真实世界坐标
-    const x = pixelToWorldCoordinate(
+    const { x, y } = pixelToWorldCoordinate(
       event.offsetX,
-      this.scale,
-      this.mapInfo.resolution,
-      this.mapInfo.origin.position.x
-    )
-    const y = pixelToWorldCoordinate(
       event.offsetY,
       this.scale,
       this.mapInfo.resolution,
+      this.mapInfo.origin.position.x,
       this.mapInfo.origin.position.y
     )
     if (!this.navTranslation) {
@@ -239,13 +250,13 @@ export default class DrawManage {
       y
     )
     // 处于导航模式
-    if(this.goalChannelId !== undefined) {
+    if (this.goalChannelId !== undefined) {
       this.foxgloveClientStore.publishMessage(this.goalChannelId, {
         header: {
           seq: this.goalSeq++,
           stamp: {
             secs: Math.floor(Date.now() / 1000),
-            nsecs: Date.now() / 1000 * 1000000
+            nsecs: (Date.now() / 1000) * 1000000
           },
           frame_id: 'map'
         },
@@ -289,7 +300,7 @@ export default class DrawManage {
         seq: this.goalSeq++,
         stamp: {
           secs: Math.floor(Date.now() / 1000),
-          nsecs: Date.now() / 1000 * 1000000
+          nsecs: (Date.now() / 1000) * 1000000
         },
         frame_id: 'map'
       },
@@ -311,12 +322,17 @@ export default class DrawManage {
 
 // 像素坐标转真实世界坐标
 const pixelToWorldCoordinate = (
-  pixelOffset: number,
+  pixelOffsetX: number,
+  pixelOffsetY: number,
   scale: number,
   resolution: number,
-  origin: number
-) => {
-  return pixelOffset * scale * resolution + origin
+  originX: number,
+  originY: number
+): { x: number; y: number } => {
+  return {
+    x: pixelOffsetX * scale * resolution + originX,
+    y: -(pixelOffsetY * scale * resolution + originY)
+  }
 }
 
 // 起始坐标计算旋转四元数（二维平面）

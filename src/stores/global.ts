@@ -1,6 +1,5 @@
 import { reactive } from 'vue'
 import { defineStore } from 'pinia'
-import Modal from '@/base/Modal.vue'
 
 type GlobalState = {
   loading: boolean,
@@ -23,8 +22,6 @@ export const useGlobalStore = defineStore('global', () => {
   }
 
   function setModalRef(modalRef: any) {
-    console.log('here', modalRef);
-    
     state.modalRef = modalRef
   }
 

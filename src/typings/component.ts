@@ -26,6 +26,7 @@ export interface TableAction {
   danger?: boolean
   callback?: (record: any) => any
   showFilter?: (record: any) => boolean
+  disabled?: (record: any) => boolean
 }
 
 export interface SearchOptions extends Partial<FormOptions> {
@@ -90,6 +91,7 @@ export interface ModalOptions {
   showFooter?: boolean
   showMessage?: boolean
   content?: string
+  closeModal?: boolean
 }
 
 export interface UploadOptions {
