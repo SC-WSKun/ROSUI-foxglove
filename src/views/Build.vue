@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, h } from 'vue'
+import { reactive, ref, h, onBeforeUnmount } from 'vue'
 import {
   CaretRightOutlined,
   PauseOutlined,
@@ -133,6 +133,12 @@ const subscribeMapTopic = () => {
     })
 }
 
+// 取消订阅地图消息
+const unSubscribeMapTopic = () => {
+  foxgloveClientStore.stopListenMessage(mapMsgHandler)
+  foxgloveClientStore.unSubscribeTopic(state.mapSubId)
+}
+
 // 启动建图模式
 const launchBuild = () => {
   if (!state.building) {
@@ -177,7 +183,6 @@ const launchBuild = () => {
     })
   } else {
     foxgloveClientStore.unSubscribeTopic(state.mapSubId)
-
     state.building = false
     state.finish = true
     state.mapSubId = -1
@@ -202,8 +207,7 @@ const finishBuild = () => {
   state.finish = true
   state.building = false
   state.pause = false
-  foxgloveClientStore.stopListenMessage(mapMsgHandler)
-  foxgloveClientStore.unSubscribeTopic(state.mapSubId)
+  unSubscribeMapTopic()
   message.success('建图完成')
 }
 
@@ -250,6 +254,10 @@ const saveMap = () => {
     }
   })
 }
+
+onBeforeUnmount(() => {
+  unSubscribeMapTopic()
+})
 </script>
 
 <style lang="less" scoped>

@@ -9,7 +9,8 @@
         :bordered="false"
         style="width: 100%; height: 100%"
       >
-        <div class="select" v-if="!state.selectedMap">
+        <!-- 选择地图 -->
+        <div class="select" v-if="state.curState === 0">
           <div class="list">
             <Table
               :tableOptions="tableOptions"
@@ -18,17 +19,26 @@
             ></Table>
           </div>
         </div>
-        <div class="map" v-else>
-          <div class="btn" v-if="!state.initFinish">
-            <a-button type="primary" v-if="state.adding" @click="finishAdding">
-              完成
-            </a-button>
-            <a-button @click="initPose" v-else>指定初始位姿</a-button>
-          </div>
-          <div class="btn" v-else>
-            <JoyStick></JoyStick>
-            <a-button @click="connectMap">连接地图</a-button>
-          </div>
+        <!-- 预览 -->
+        <div class="btn" v-if="state.curState === 1">
+          <a-button @click="initPose">指定初始位姿</a-button>
+        </div>
+        <!-- 指定初始位姿 -->
+        <div class="btn" v-if="state.curState === 2">
+          <a-button type="primary" v-if="state.adding" @click="finishAdding">
+            完成
+          </a-button>
+        </div>
+        <!-- 导航 -->
+        <div class="btn" v-if="state.curState === 3">
+          <JoyStick></JoyStick>
+          <a-button @click="connectMap">连接地图</a-button>
+          <a-button @click="closeNav" danger>结束导航</a-button>
+        </div>
+        <!-- 暂停导航 -->
+        <div class="btn" v-if="state.curState === 4">
+          <a-button @click="startNavigation">恢复导航</a-button>
+          <a-button @click="selectMap">重新选择地图</a-button>
         </div>
       </a-card>
     </div>
@@ -39,7 +49,7 @@
 <script setup lang="ts">
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useGlobalStore } from '@/stores/global'
-import { onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { type GridMap, type Map } from '@/typings'
 import type { TableOptions } from '@/typings/component'
 import type { MessageData } from '@foxglove/ws-protocol'
@@ -58,6 +68,7 @@ interface State {
   initFinish: boolean
   goalChannelId: number | undefined
   connecting: boolean
+  curState: number
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -73,10 +84,19 @@ const state = reactive<State>({
   drawManage: new DrawManage(),
   initFinish: false,
   goalChannelId: undefined,
-  connecting: false
+  connecting: false,
+  curState: 0
 })
 
 const modalRef: any = ref(null)
+
+const STATE_MAP = {
+  SELECTING: 0, // 选择地图
+  PREVIEWING: 1, // 预览地图
+  INITING: 2, // 初始化位姿
+  NAVIGATING: 3, // 导航
+  PAUSING: 4 // 暂停
+}
 
 // 地图列表表格配置项
 const tableOptions: TableOptions = {
@@ -100,6 +120,12 @@ const tableOptions: TableOptions = {
       callback: (record: Map) => {
         globalStore.setLoading(true, '加载地图中')
         state.selectedMap = record
+        if (state.selectedMap) {
+          foxgloveClientStore.stopListenMessage(mapMsgHandler)
+          foxgloveClientStore.unSubscribeTopic(state.mapSubId)
+          state.drawManage.removeArrow()
+          state.mapSubId = -1
+        }
         foxgloveClientStore
           .callService('/tiered_nav_state_machine/get_grid_map', {
             info: record
@@ -123,6 +149,7 @@ const tableOptions: TableOptions = {
             state.drawManage.drawGridMap(wrap, res.map, true)
             state.panzoomIns = state.drawManage.panzoomIns
             state.imgWrap = state.drawManage.imgWrap
+            state.curState = STATE_MAP.PREVIEWING
             globalStore.setLoading(false)
           })
           .catch((err) => {
@@ -157,6 +184,7 @@ const initPose = () => {
   state.adding = true
   state.drawManage.pzRemoveListener()
   state.drawManage.navAddListener()
+  state.curState = STATE_MAP.INITING
   notification.success({
     placement: 'topRight',
     message: '请在地图按下并拖动鼠标来指定初始位姿',
@@ -167,15 +195,12 @@ const initPose = () => {
 // 完成初始位姿指定
 const finishAdding = () => {
   state.adding = false
-  state.drawManage.pzAddListener()
-  state.drawManage.navRemoveListener()
   globalStore.setLoading(true)
   foxgloveClientStore
     .callService('/tiered_nav_state_machine/switch_mode', {
       mode: 2
     })
-    .then((res) => {
-      console.log(res)
+    .then(() => {
       foxgloveClientStore
         .callService('/tiered_nav_state_machine/load_map', {
           p: {
@@ -186,17 +211,28 @@ const finishAdding = () => {
             }
           }
         })
-        .then((res1) => {
-          console.log('res1', res1)
-          foxgloveClientStore.subscribeTopic('/map').then((res2) => {
-            globalStore.setLoading(false)
-            state.initFinish = true
-            state.mapSubId = res2
-            foxgloveClientStore.listenMessage(mapMsgHandler)
-          })
-          state.drawManage.launchNavigation()
+        .then(() => {
+          startNavigation()
         })
     })
+}
+
+// 开启导航
+const startNavigation = () => {
+  globalStore.setLoading(true)
+  state.curState = STATE_MAP.NAVIGATING
+  state.drawManage.launchNavigation()
+  globalStore.setLoading(false)
+  if (state.mapSubId === -1) {
+    globalStore.setLoading(true)
+    foxgloveClientStore.subscribeTopic('/map').then((res) => {
+      state.initFinish = true
+      state.mapSubId = res
+      foxgloveClientStore.listenMessage(mapMsgHandler)
+      state.curState = STATE_MAP.NAVIGATING
+      globalStore.setLoading(false)
+    })
+  }
 }
 
 // 地图消息监听回调
@@ -241,11 +277,29 @@ const connectMap = () => {
   })
 }
 
+// 选择地图
+const selectMap = () => {
+  state.curState = STATE_MAP.SELECTING
+  listMaps()
+}
+
+// 结束导航
+const closeNav = () => {
+  state.drawManage.closeNavigation()
+  state.drawManage.pzAddListener()
+  state.curState = STATE_MAP.PAUSING
+}
+
 onMounted(() => {
   globalStore.setLoading(true, '地图列表加载中')
   setTimeout(() => {
     listMaps()
   }, 500)
+})
+
+onBeforeUnmount(() => {
+  state.drawManage?.pzRemoveListener()
+  state.drawManage?.navRemoveListener()
 })
 </script>
 
@@ -283,7 +337,7 @@ onMounted(() => {
   }
 }
 
-/deep/ .Table {
+:deep(.Table) {
   &-header {
     font-size: 15px !important;
   }

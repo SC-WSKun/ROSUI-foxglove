@@ -286,6 +286,8 @@ export default class DrawManage {
 
   // 启动导航
   launchNavigation() {
+    this.pzRemoveListener()
+    this.navAddListener()
     this.goalChannelId = this.foxgloveClientStore.advertiseTopic({
       encoding: 'cdr',
       schema:
@@ -295,20 +297,6 @@ export default class DrawManage {
       topic: '/goal_pose'
     })
     message.success('导航模式已启动')
-    this.foxgloveClientStore.publishMessage(this.goalChannelId, {
-      header: {
-        seq: this.goalSeq++,
-        stamp: {
-          secs: Math.floor(Date.now() / 1000),
-          nsecs: (Date.now() / 1000) * 1000000
-        },
-        frame_id: 'map'
-      },
-      pose: {
-        position: this.navTranslation,
-        orientation: this.navRotation
-      }
-    })
   }
 
   // 关闭导航
@@ -317,6 +305,11 @@ export default class DrawManage {
     this.goalChannelId = undefined
     this.foxgloveClientStore.unAdvertiseTopic(this.goalChannelId)
     message.warning('导航模式已关闭')
+  }
+
+  // 清除图中残留箭头
+  removeArrow() {
+    if (this.arrow) this.imgWrap?.removeChild(this.arrow)
   }
 }
 
