@@ -196,6 +196,7 @@ const initPose = () => {
 const finishAdding = () => {
   state.adding = false
   globalStore.setLoading(true)
+  state.drawManage.subscribeCarPosition()
   foxgloveClientStore
     .callService('/tiered_nav_state_machine/switch_mode', {
       mode: 2
@@ -247,8 +248,6 @@ const mapMsgHandler = ({
       state.mapSubId,
       data
     ) as GridMap
-    console.log(parseData)
-
     const wrap = document.getElementById('navigationMap') as HTMLElement
     state.drawManage.drawGridMap(wrap, parseData)
   }
@@ -288,6 +287,7 @@ const closeNav = () => {
   state.drawManage.closeNavigation()
   state.drawManage.pzAddListener()
   state.curState = STATE_MAP.PAUSING
+  state.drawManage.unSubscribeCarPosition()
 }
 
 onMounted(() => {

@@ -63,3 +63,17 @@ export type Quaternion = {
   y: number
   z: number
 }
+
+export type Transform = {
+  rotation: {
+    x: number
+    y: number
+    z: number
+    w: number
+  }
+  translation: {
+    x: number
+    y: number
+    z: number
+  }
+}

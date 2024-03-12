@@ -6,7 +6,7 @@
       RosUI-Foxglove
     </div>
     <div class="Header-info">
-      <a-dropdown>
+      <a-dropdown v-if="menus.length">
         <a class="ant-dropdown-link" @click.prevent>
           操作
           <DownOutlined :style="{ fontSize: '12px' }" />
