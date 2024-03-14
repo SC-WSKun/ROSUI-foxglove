@@ -98,7 +98,7 @@ export default class DrawManage {
     const canvas = document.createElement('canvas')
     canvas.id = 'map_canvas'
     this.mapInfo = data.info
-    console.log('draw.ts - mapInfo', this.mapInfo)
+    // console.log('draw.ts - mapInfo', this.mapInfo)
 
     canvas.width = this.mapInfo.width
     canvas.height = this.mapInfo.height
@@ -120,7 +120,7 @@ export default class DrawManage {
     }
     ctx.putImageData(imgData, 0, 0)
     // img标签展示地图
-    this.img = new Image()
+    if (!this.img) this.img = new Image()
     // 确保地图能够等比例完全展示
     if (
       wrap?.clientWidth! / wrap?.clientHeight! >
@@ -218,6 +218,7 @@ export default class DrawManage {
 
   // 移除地图交互事件监听
   pzRemoveListener() {
+    if (!this.panzoomIns) return
     this.img?.removeEventListener('mousedown', this.handleMousedown)
     this.img?.removeEventListener('mousemove', this.handleMousemove)
     this.img?.removeEventListener('mouseup', this.handleMouseup)
@@ -344,7 +345,7 @@ export default class DrawManage {
 
   // 启动导航
   launchNavigation() {
-    this.pzRemoveListener()
+    if (this.panzoomIns) this.pzRemoveListener()
     this.navAddListener()
     this.goalChannelId = this.foxgloveClientStore.advertiseTopic({
       encoding: 'cdr',
@@ -389,14 +390,10 @@ export default class DrawManage {
   updateCarPose() {
     if (!this.carPose || !this.mapInfo || !this.imgWrap) return
     if (!this.car) {
+      console.log(123);
+      
       this.car = document.createElement('div')
       this.car.className = 'car'
-      this.car.style.width = '10px'
-      this.car.style.height = '10px'
-      this.car.style.backgroundColor = 'red'
-      this.car.style.position = 'absolute'
-      this.car.style.borderRadius = '50%'
-      this.car.style.transition = 'all 0.5s'
     }
     const { x, y } = worldCoordinateToPixel(
       this.carPose.x,

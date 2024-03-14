@@ -77,6 +77,7 @@ import { useGlobalStore } from '@/stores/global'
 import type { MessageData } from '@foxglove/ws-protocol'
 import type { GridMap } from '@/typings'
 import DrawManage from '@/utils/draw'
+import _ from 'lodash'
 
 interface State {
   building: boolean
@@ -84,6 +85,7 @@ interface State {
   pause: boolean
   finish: boolean
   drawManage: DrawManage
+  onceLaunchNavigation: (() => void) | null
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -96,7 +98,8 @@ const state = reactive<State>({
   mapSubId: -1,
   pause: false,
   finish: false,
-  drawManage: new DrawManage()
+  drawManage: new DrawManage(),
+  onceLaunchNavigation: null
 })
 
 // 地图消息监听回调
@@ -113,6 +116,7 @@ const mapMsgHandler = ({
     ) as GridMap
     const wrap = document.querySelector('#buildMap')
     state.drawManage.drawGridMap(wrap, parseData)
+    if (state.onceLaunchNavigation) state.onceLaunchNavigation()
   }
 }
 
@@ -125,7 +129,6 @@ const subscribeMapTopic = () => {
       state.building = true
       state.pause = false
       state.finish = false
-
       foxgloveClientStore.listenMessage(mapMsgHandler)
     })
     .catch((err: string) => {
@@ -173,6 +176,10 @@ const launchBuild = () => {
             globalStore.setLoading(false)
             console.log('res', res)
             subscribeMapTopic()
+            state.onceLaunchNavigation = _.once(() =>
+              state.drawManage.launchNavigation()
+            )
+            state.drawManage.subscribeCarPosition()
           })
           .catch((err) => {
             globalStore.setLoading(false)
@@ -208,6 +215,8 @@ const finishBuild = () => {
   state.building = false
   state.pause = false
   unSubscribeMapTopic()
+  state.drawManage.unSubscribeCarPosition()
+  state.drawManage.navRemoveListener()
   message.success('建图完成')
 }
 
@@ -257,6 +266,8 @@ const saveMap = () => {
 
 onBeforeUnmount(() => {
   unSubscribeMapTopic()
+  state.drawManage.unSubscribeCarPosition()
+  state.drawManage.navRemoveListener()
 })
 </script>
 
