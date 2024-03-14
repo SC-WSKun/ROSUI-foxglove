@@ -33,11 +33,19 @@
         <div class="btn" v-if="state.curState === 3">
           <JoyStick></JoyStick>
           <a-button @click="connectMap">连接地图</a-button>
-          <a-button @click="closeNav" danger>结束导航</a-button>
+          <div class="switch">
+            <a-switch
+              v-model:checked="state.navigating"
+              @change="switchNavigation"
+            ></a-switch
+            >导航模式
+          </div>
+
+          <a-button @click="closeNav" type="primary" danger>结束导航</a-button>
         </div>
         <!-- 暂停导航 -->
         <div class="btn" v-if="state.curState === 4">
-          <a-button @click="startNavigation">恢复导航</a-button>
+          <a-button @click="subscribeMapTopic">恢复导航</a-button>
           <a-button @click="selectMap">重新选择地图</a-button>
         </div>
       </a-card>
@@ -69,6 +77,7 @@ interface State {
   goalChannelId: number | undefined
   connecting: boolean
   curState: number
+  navigating: boolean
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -85,7 +94,8 @@ const state = reactive<State>({
   initFinish: false,
   goalChannelId: undefined,
   connecting: false,
-  curState: 0
+  curState: 0,
+  navigating: false
 })
 
 const modalRef: any = ref(null)
@@ -180,7 +190,7 @@ const listMaps = () => {
 
 // 指定初始位姿
 const initPose = () => {
-  state.panzoomIns?.reset()
+  // state.panzoomIns?.reset()
   state.adding = true
   state.drawManage.pzRemoveListener()
   state.drawManage.navAddListener()
@@ -213,16 +223,19 @@ const finishAdding = () => {
           }
         })
         .then(() => {
-          startNavigation()
+          subscribeMapTopic()
+          state.drawManage.advertiseNavTopic()
         })
     })
 }
 
-// 开启导航
-const startNavigation = () => {
+// 订阅map话题
+const subscribeMapTopic = () => {
   globalStore.setLoading(true)
   state.curState = STATE_MAP.NAVIGATING
-  state.drawManage.launchNavigation()
+  // state.drawManage.launchNavigation()
+  state.drawManage.navRemoveListener()
+  state.drawManage.pzAddListener()
   globalStore.setLoading(false)
   if (state.mapSubId === -1) {
     globalStore.setLoading(true)
@@ -249,7 +262,7 @@ const mapMsgHandler = ({
       data
     ) as GridMap
     const wrap = document.getElementById('navigationMap') as HTMLElement
-    state.drawManage.drawGridMap(wrap, parseData)
+    state.drawManage.drawGridMap(wrap, parseData, true)
   }
 }
 
@@ -280,6 +293,22 @@ const connectMap = () => {
 const selectMap = () => {
   state.curState = STATE_MAP.SELECTING
   listMaps()
+}
+
+// 开/关导航模式
+const switchNavigation = () => {
+  if (state.navigating) {
+    state.drawManage.pzRemoveListener()
+    state.drawManage.navAddListener()
+    notification.success({
+      placement: 'topRight',
+      message: '请在地图上选择导航点',
+      duration: 3
+    })
+  } else {
+    state.drawManage.navRemoveListener()
+    state.drawManage.pzAddListener()
+  }
 }
 
 // 结束导航
@@ -333,6 +362,10 @@ onBeforeUnmount(() => {
       width: 100%;
       .flex(center, center);
       gap: 10px;
+      .switch {
+        display: flex;
+        gap: 5px;
+      }
     }
   }
 }

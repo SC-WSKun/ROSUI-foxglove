@@ -155,16 +155,16 @@ export default class DrawManage {
     }
 
     // 添加缩放和平移功能
-    if (pz) {
+    if (pz && !this.panzoomIns) {
       this.setPanzoom(this.imgWrap)
     }
 
     // 启动导航点交互
-    if (this.goalChannelId !== undefined) {
-      // 优先移除地图交互监听，避免冲突
-      this.pzRemoveListener()
-      this.navAddListener()
-    }
+    // if (this.goalChannelId !== undefined) {
+    //   // 优先移除地图交互监听，避免冲突
+    //   this.pzRemoveListener()
+    //   this.navAddListener()
+    // }
   }
 
   // 为画布添加缩放和平移拖拽功能
@@ -187,6 +187,8 @@ export default class DrawManage {
     if (event.button === 0) {
       this.panzoomIns!.handleDown(event)
     }
+    console.log(this.panzoomIns?.getScale(), this.panzoomIns?.getPan());
+    console.log(event.offsetX, event.offsetY);
   }
 
   handleMousemove: any = (event: PointerEvent) => {
@@ -325,6 +327,8 @@ export default class DrawManage {
         }
       })
     }
+    // 隐藏箭头
+    // this.imgWrap?.removeChild(this.arrow!)
     console.log('rotation', this.navRotation)
   }
 
@@ -344,9 +348,9 @@ export default class DrawManage {
   }
 
   // 启动导航
-  launchNavigation() {
-    if (this.panzoomIns) this.pzRemoveListener()
-    this.navAddListener()
+  advertiseNavTopic() {
+    // if (this.panzoomIns) this.pzRemoveListener()
+    // this.navAddListener()
     this.goalChannelId = this.foxgloveClientStore.advertiseTopic({
       encoding: 'cdr',
       schema:

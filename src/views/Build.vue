@@ -12,46 +12,44 @@
         style="width: 100%; height: 100%"
       >
         <div class="build">
-          <div class="btn">
+          <!-- 建图前 -->
+          <div class="btn" v-if="state.curState === 0">
             <a-button
               @click="launchBuild"
               type="primary"
               :icon="h(CaretRightOutlined)"
-              v-if="!state.finish && !state.building"
             >
               开始建图
             </a-button>
+          </div>
+          <!-- 建图中 -->
+          <div class="btn" v-if="state.curState === 1">
             <a-button
               @click="switchBuild"
               type="primary"
               :icon="h(PauseOutlined)"
-              v-if="state.building && !state.pause"
               danger
             >
               暂停建图
             </a-button>
+            <div class="switch">
+              <a-switch
+                v-model:checked="state.navigating"
+                @change="switchNavigation"
+              ></a-switch
+              >导航模式
+            </div>
+          </div>
+          <!-- 建图后 -->
+          <div class="btn" v-if="state.curState === 2">
             <a-button
               @click="switchBuild"
               type="primary"
               :icon="h(CaretRightOutlined)"
-              v-if="state.pause"
             >
               继续建图
             </a-button>
-            <a-button
-              @click="finishBuild"
-              type="primary"
-              :icon="h(CheckOutlined)"
-              v-if="state.pause"
-            >
-              完成建图
-            </a-button>
-            <a-button
-              @click="saveMap"
-              type="primary"
-              v-if="state.finish"
-              :icon="h(SaveOutlined)"
-            >
+            <a-button @click="saveMap" type="primary" :icon="h(SaveOutlined)">
               保存地图
             </a-button>
           </div>
@@ -86,6 +84,8 @@ interface State {
   finish: boolean
   drawManage: DrawManage
   onceLaunchNavigation: (() => void) | null
+  curState: number
+  navigating: boolean
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -93,13 +93,21 @@ const globalStore = useGlobalStore()
 
 const modalRef: any = ref(null)
 
+const STATE_MAP = {
+  WAITING: 0,
+  BUILDING: 1,
+  PAUSING: 2
+}
+
 const state = reactive<State>({
   building: false,
   mapSubId: -1,
   pause: false,
   finish: false,
   drawManage: new DrawManage(),
-  onceLaunchNavigation: null
+  onceLaunchNavigation: null,
+  curState: 0,
+  navigating: false
 })
 
 // 地图消息监听回调
@@ -115,8 +123,12 @@ const mapMsgHandler = ({
       data
     ) as GridMap
     const wrap = document.querySelector('#buildMap')
-    state.drawManage.drawGridMap(wrap, parseData)
-    if (state.onceLaunchNavigation) state.onceLaunchNavigation()
+    state.drawManage.drawGridMap(wrap, parseData, true)
+    if (state.onceLaunchNavigation) {
+      state.onceLaunchNavigation()
+      console.log(444);
+      
+    }
   }
 }
 
@@ -174,11 +186,12 @@ const launchBuild = () => {
           })
           ?.then((res) => {
             globalStore.setLoading(false)
-            console.log('res', res)
+            state.curState = STATE_MAP.BUILDING
             subscribeMapTopic()
-            state.onceLaunchNavigation = _.once(() =>
-              state.drawManage.launchNavigation()
-            )
+            state.onceLaunchNavigation = _.once(() => {
+              state.drawManage.pzAddListener()
+              state.drawManage.advertiseNavTopic()
+            })
             state.drawManage.subscribeCarPosition()
           })
           .catch((err) => {
@@ -200,25 +213,43 @@ const launchBuild = () => {
 const switchBuild = () => {
   if (state.pause) {
     state.pause = false
+    state.curState = STATE_MAP.BUILDING
     foxgloveClientStore.listenMessage(mapMsgHandler)
     message.success('建图继续')
   } else {
     state.pause = true
+    state.curState = STATE_MAP.PAUSING
     foxgloveClientStore.stopListenMessage(mapMsgHandler)
     message.warn('建图暂停')
   }
 }
 
-// 终止建图模式
-const finishBuild = () => {
-  state.finish = true
-  state.building = false
-  state.pause = false
-  unSubscribeMapTopic()
-  state.drawManage.unSubscribeCarPosition()
-  state.drawManage.navRemoveListener()
-  message.success('建图完成')
+// 开/关导航模式
+const switchNavigation = () => {
+  if (state.navigating) {
+    state.drawManage.pzRemoveListener()
+    state.drawManage.navAddListener()
+    notification.success({
+      placement: 'topRight',
+      message: '请在地图上选择导航点',
+      duration: 3
+    })
+  } else {
+    state.drawManage.navRemoveListener()
+    state.drawManage.pzAddListener()
+  }
 }
+
+// 终止建图模式
+// const finishBuild = () => {
+//   state.finish = true
+//   state.building = false
+//   state.pause = false
+//   unSubscribeMapTopic()
+//   state.drawManage.unSubscribeCarPosition()
+//   state.drawManage.navRemoveListener()
+//   message.success('建图完成')
+// }
 
 // 保存地图
 const saveMap = () => {
@@ -304,6 +335,10 @@ onBeforeUnmount(() => {
         width: 80%;
         .flex(center, center);
         gap: 10px;
+        .switch {
+          display: flex;
+          gap: 5px;
+        }
       }
     }
   }
