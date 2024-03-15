@@ -126,8 +126,7 @@ const mapMsgHandler = ({
     state.drawManage.drawGridMap(wrap, parseData, true)
     if (state.onceLaunchNavigation) {
       state.onceLaunchNavigation()
-      console.log(444);
-      
+      console.log(444)
     }
   }
 }
@@ -193,6 +192,7 @@ const launchBuild = () => {
               state.drawManage.advertiseNavTopic()
             })
             state.drawManage.subscribeCarPosition()
+            state.drawManage.subscribeScanPoints()
           })
           .catch((err) => {
             globalStore.setLoading(false)
@@ -220,6 +220,8 @@ const switchBuild = () => {
     state.pause = true
     state.curState = STATE_MAP.PAUSING
     foxgloveClientStore.stopListenMessage(mapMsgHandler)
+    state.navigating = false
+    switchNavigation()
     message.warn('建图暂停')
   }
 }
@@ -298,6 +300,7 @@ const saveMap = () => {
 onBeforeUnmount(() => {
   unSubscribeMapTopic()
   state.drawManage.unSubscribeCarPosition()
+  state.drawManage.unSubscribeScanPoints()
   state.drawManage.navRemoveListener()
 })
 </script>

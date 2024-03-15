@@ -207,6 +207,7 @@ const finishAdding = () => {
   state.adding = false
   globalStore.setLoading(true)
   state.drawManage.subscribeCarPosition()
+  state.drawManage.subscribeScanPoints()
   foxgloveClientStore
     .callService('/tiered_nav_state_machine/switch_mode', {
       mode: 2
@@ -295,7 +296,7 @@ const selectMap = () => {
   listMaps()
 }
 
-// 开/关导航模式
+// 开/关导航模式(能够选择导航点)
 const switchNavigation = () => {
   if (state.navigating) {
     state.drawManage.pzRemoveListener()
@@ -313,10 +314,10 @@ const switchNavigation = () => {
 
 // 结束导航
 const closeNav = () => {
-  state.drawManage.closeNavigation()
+  // state.drawManage.closeNavigation()
+  state.drawManage.navRemoveListener()
   state.drawManage.pzAddListener()
   state.curState = STATE_MAP.PAUSING
-  state.drawManage.unSubscribeCarPosition()
 }
 
 onMounted(() => {
@@ -329,6 +330,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   state.drawManage?.pzRemoveListener()
   state.drawManage?.navRemoveListener()
+  state.drawManage.unSubscribeCarPosition()
+  state.drawManage.unSubscribeScanPoints()
+  state.drawManage.closeNavigation()
 })
 </script>
 

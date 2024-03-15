@@ -7,8 +7,8 @@
 @danger-color: #ff6969;
 @white-font-color: #fefefe;
 @black-font-color: #252a41;
-@gradient-color1: #6834E4;
-@gradient-color2: #87CBE4;
+@gradient-color1: #6834e4;
+@gradient-color2: #87cbe4;
 
 @font-size-huge: 24px;
 @font-size-large: 20px;
@@ -17,35 +17,64 @@
 @font-size-small: 14px;
 
 @header-height: 60px;
-@menu-width: 250px; 
+@menu-width: 250px;
 
-.flex(@justifyContent: center, @alignItems: center, @direction: raw){
-    display: flex;
-    flex-direction: @direction;
-    justify-content: @justifyContent;
-    align-items: @alignItems;
+.flex(@justifyContent: center, @alignItems: center, @direction: raw) {
+  display: flex;
+  flex-direction: @direction;
+  justify-content: @justifyContent;
+  align-items: @alignItems;
 }
 
 // 滚动条
 ::-webkit-scrollbar {
-    width: 10px;
+  width: 10px;
 }
 
-::-webkit-scrollbar-track{
-    background-color: #dfdfdf;
+::-webkit-scrollbar-track {
+  background-color: #dfdfdf;
 }
 
-::-webkit-scrollbar-thumb{
-    background-color: #acacac;
-    border-radius: 100px;
+::-webkit-scrollbar-thumb {
+  background-color: #acacac;
+  border-radius: 100px;
 }
 
 // 小车样式
 .car {
-    width: 15px;
-    height: 15px;
-    background: radial-gradient(#6834E4, #87CBE4);
+  width: 15px;
+  height: 15px;
+  background: radial-gradient(#6834e4, #87cbe4);
+  position: absolute;
+  border-radius: 50%;
+  transition: all 0.5s;
+}
+
+// 箭头样式
+.arrow {
+  position: absolute;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, -100%);
+}
+
+// 扫描点云容器样式
+.points-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+// 扫描点云样式
+.point {
     position: absolute;
+    width: 4px;
+    height: 4px;
+    background: red;
     border-radius: 50%;
-    transition: all .5s;
 }

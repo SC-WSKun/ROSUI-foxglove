@@ -1,3 +1,4 @@
+import type { MessageData } from '@foxglove/ws-protocol'
 import type { PanzoomObject } from '@panzoom/panzoom'
 
 export * as Config from './config'
@@ -77,3 +78,10 @@ export type Transform = {
     z: number
   }
 }
+
+export type TopicListener = ({
+  op,
+  subscriptionId,
+  timestamp,
+  data
+}: MessageData) => void

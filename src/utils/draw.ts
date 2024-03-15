@@ -1,4 +1,10 @@
-import type { GridMap, MapInfo, Quaternion, Transform } from '@/typings'
+import type {
+  GridMap,
+  MapInfo,
+  Quaternion,
+  TopicListener,
+  Transform
+} from '@/typings'
 import Panzoom, { type PanzoomObject } from '@panzoom/panzoom'
 import { message, notification } from 'ant-design-vue'
 import arrowImage from '@/assets/arrow.png'
@@ -11,6 +17,8 @@ export default class DrawManage {
   img: HTMLImageElement | null = null
   arrow: HTMLImageElement | null = null
   car: HTMLElement | null = null
+  pointsWrap: HTMLElement | null = null
+  scanPoints: HTMLElement[] = []
   addingNav: boolean = false
   navTranslation: {
     x: number
@@ -28,21 +36,20 @@ export default class DrawManage {
   foxgloveClientStore: any = null
   goalChannelId: number | undefined = undefined
   goalSeq: number = 0 // 导航点发布序号
-  odomSubId: number | undefined = undefined
   tfSubId: number | undefined = undefined
-  carPositionListener: ({
-    op,
-    subscriptionId,
-    timestamp,
-    data
-  }: MessageData) => void
-  mapToOdom: Transform | null = null
-  odomToBaseFootprint: Transform | null = null
+  tfStaticSubId: number | undefined = undefined
+  scanSubId: number | undefined = undefined
+  carPositionListener: TopicListener
+  scanPointsListener: TopicListener
   carPose: {
     x: number
     y: number
     yaw: number
   } | null = null
+  mapToOdom: Transform | null = null
+  odomToBaseFootprint: Transform | null = null
+  baseScanToBaseLink: Transform | null = null
+  baseLinkToBaseFootprint: Transform | null = null
 
   constructor() {
     this.foxgloveClientStore = useFoxgloveClientStore()
@@ -87,6 +94,51 @@ export default class DrawManage {
         }
       }
     }
+    this.scanPointsListener = ({
+      op,
+      subscriptionId,
+      timestamp,
+      data
+    }: MessageData) => {
+      if (subscriptionId === this.tfStaticSubId) {
+        const parseData = this.foxgloveClientStore.readMsgWithSubId(
+          subscriptionId,
+          data
+        )
+        console.log('tfStatic', parseData)
+        this.baseScanToBaseLink = parseData.transforms.find(
+          (transform: any) =>
+            transform.child_frame_id === 'base_scan' &&
+            transform.header.frame_id === 'base_link'
+        ).transform
+        this.baseLinkToBaseFootprint = parseData.transforms.find(
+          (transform: any) =>
+            transform.child_frame_id === 'base_link' &&
+            transform.header.frame_id === 'base_footprint'
+        ).transform
+      } else if (subscriptionId === this.scanSubId) {
+        const parseData = this.foxgloveClientStore.readMsgWithSubId(
+          subscriptionId,
+          data
+        )
+        if (
+          !this.baseScanToBaseLink ||
+          !this.baseLinkToBaseFootprint ||
+          !this.odomToBaseFootprint ||
+          !this.mapToOdom
+        )
+          return
+        let points = transformPointCloud(parseData)
+        points = calPointPosition(
+          points,
+          this.baseScanToBaseLink,
+          this.baseLinkToBaseFootprint,
+          this.odomToBaseFootprint,
+          this.mapToOdom
+        )
+        this.updateScanPoints(points)
+      }
+    }
   }
 
   // 将后端返回的map通过canvas进行转化并展示成img
@@ -98,7 +150,6 @@ export default class DrawManage {
     const canvas = document.createElement('canvas')
     canvas.id = 'map_canvas'
     this.mapInfo = data.info
-    // console.log('draw.ts - mapInfo', this.mapInfo)
 
     canvas.width = this.mapInfo.width
     canvas.height = this.mapInfo.height
@@ -187,8 +238,6 @@ export default class DrawManage {
     if (event.button === 0) {
       this.panzoomIns!.handleDown(event)
     }
-    console.log(this.panzoomIns?.getScale(), this.panzoomIns?.getPan());
-    console.log(event.offsetX, event.offsetY);
   }
 
   handleMousemove: any = (event: PointerEvent) => {
@@ -233,18 +282,11 @@ export default class DrawManage {
     event.preventDefault()
     this.addingNav = true
     this.arrow = document.createElement('img') as HTMLImageElement
+    this.arrow.className = 'arrow'
     this.arrow.src = arrowImage
     if (!this.arrow) return
-    this.arrow.className = 'arrow'
-    this.arrow.style.position = 'absolute'
-    this.arrow.style.pointerEvents = 'none'
-    this.arrow.style.width = '1px'
-    this.arrow.style.height = '1px'
     this.arrow.style.left = `${event.offsetX}px`
     this.arrow.style.top = `${event.offsetY}px`
-    this.arrow.style.transformOrigin = '50% 100%'
-    this.arrow.style.transform = 'translate(-50%, -100%)'
-    // console.log(213, event.offsetX * this.scale, event.offsetY * this.scale)
     if (!this.mapInfo) {
       message.error('map_info not found!')
       return
@@ -263,7 +305,6 @@ export default class DrawManage {
       y,
       z: 0
     }
-    // console.log('navTranslation', this.navTranslation)
 
     const prevArrow = this.imgWrap?.querySelector('.arrow')
     if (prevArrow) {
@@ -377,25 +418,39 @@ export default class DrawManage {
 
   // 监听小车位置信息
   subscribeCarPosition() {
-    this.foxgloveClientStore.subscribeTopic('/tf').then((res: number) => {
-      this.tfSubId = res
-    })
+    this.foxgloveClientStore
+      .subscribeTopic('/tf')
+      .then((res: number) => (this.tfSubId = res))
     this.foxgloveClientStore.listenMessage(this.carPositionListener)
   }
 
   // 停止监听小车位置信息
   unSubscribeCarPosition() {
     this.foxgloveClientStore.stopListenMessage(this.carPositionListener)
-    this.foxgloveClientStore.unSubscribeTopic(this.odomSubId)
     this.foxgloveClientStore.unSubscribeTopic(this.tfSubId)
+  }
+
+  // 监听扫描红点
+  subscribeScanPoints() {
+    this.foxgloveClientStore
+      .subscribeTopic('/scan')
+      .then((res: number) => (this.scanSubId = res))
+    this.foxgloveClientStore
+      .subscribeTopic('/tf_static')
+      .then((res: number) => (this.tfStaticSubId = res))
+    this.foxgloveClientStore.listenMessage(this.scanPointsListener)
+  }
+
+  // 停止监听扫描红点
+  unSubscribeScanPoints() {
+    this.foxgloveClientStore.stopListenMessage(this.scanPointsListener)
+    this.foxgloveClientStore.unSubscribeTopic(this.scanSubId)
   }
 
   // 在地图上更新小车位置
   updateCarPose() {
     if (!this.carPose || !this.mapInfo || !this.imgWrap) return
     if (!this.car) {
-      console.log(123);
-      
       this.car = document.createElement('div')
       this.car.className = 'car'
     }
@@ -410,6 +465,33 @@ export default class DrawManage {
     this.car.style.left = `${x}px`
     this.car.style.top = `${this.imgWrap.offsetHeight - y}px`
     this.imgWrap?.appendChild(this.car)
+  }
+
+  // 在地图上更新扫描红点
+  updateScanPoints(points: { x: number; y: number }[]) {
+    if (!this.imgWrap || !this.mapInfo) return
+    if (!this.pointsWrap) {
+      this.pointsWrap = document.createElement('div')
+      this.pointsWrap.className = 'points-wrap'
+      this.imgWrap.appendChild(this.pointsWrap)
+    }
+    // 清除之前的红点
+    this.pointsWrap.innerHTML = ''
+    points.forEach((point: { x: number; y: number }) => {
+      const pointEl = document.createElement('div')
+      pointEl.className = 'point'
+      const { x, y } = worldCoordinateToPixel(
+        point.x,
+        point.y,
+        this.scale,
+        this.mapInfo!.resolution,
+        this.mapInfo!.origin.position.x,
+        this.mapInfo!.origin.position.y
+      )
+      pointEl.style.left = `${x}px`
+      pointEl.style.top = `${this.imgWrap!.offsetHeight - y}px`
+      this.pointsWrap!.appendChild(pointEl)
+    })
   }
 }
 
@@ -518,4 +600,57 @@ const mapToBaseFootprint = (
     y: finalTranslationY,
     yaw: finalYaw
   }
+}
+
+// 转换点云数据
+const transformPointCloud = (pointCloud: any) => {
+  const points = []
+  let angle = pointCloud.angle_min
+  for (let i = 0; i < pointCloud.ranges.length; i++) {
+    if (pointCloud.ranges[i] !== Infinity) {
+      const point = {
+        x: pointCloud.ranges[i] * Math.cos(angle),
+        y: pointCloud.ranges[i] * Math.sin(angle)
+      }
+      points.push(point)
+    }
+    angle += pointCloud.angle_increment
+  }
+  return points
+}
+
+// 点云应用坐标系转换
+const applyTransform = (
+  points: { x: number; y: number }[],
+  transform: Transform
+) => {
+  const { rotation, translation } = transform
+  return points.map((point) => {
+    const yaw = Math.atan2(
+      2.0 * (rotation.w * rotation.z + rotation.x * rotation.y),
+      1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z)
+    )
+    const rotatedX = Math.cos(yaw) * point.x - Math.sin(yaw) * point.y
+    const rotatedY = Math.sin(yaw) * point.x + Math.cos(yaw) * point.y
+    return {
+      x: rotatedX + translation.x,
+      y: rotatedY + translation.y
+    }
+  })
+}
+
+// 计算扫描红点相对于map的位置
+// base_scae -> base_link -> base_footprint => odom -> map
+const calPointPosition = (
+  points: { x: number; y: number }[],
+  baseScanToBaseLink: Transform,
+  baseLinkToBaseFootprint: Transform,
+  baseFootprintToOdom: Transform,
+  odomToMap: Transform
+) => {
+  points = applyTransform(points, baseScanToBaseLink)
+  points = applyTransform(points, baseLinkToBaseFootprint)
+  points = applyTransform(points, baseFootprintToOdom)
+  points = applyTransform(points, odomToMap)
+  return points
 }
