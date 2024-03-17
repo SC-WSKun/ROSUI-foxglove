@@ -42,12 +42,23 @@
 
 // 小车样式
 .car {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   background: radial-gradient(#6834e4, #87cbe4);
   position: absolute;
   border-radius: 50%;
   transition: all 0.5s;
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border: 5px solid transparent;
+    border-left-color: #5b63d3;
+    right: -12px;
+    top: 3px;
+  }
 }
 
 // 箭头样式
@@ -73,9 +84,9 @@
 
 // 扫描点云样式
 .point {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background: red;
-    border-radius: 50%;
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: red;
+  border-radius: 50%;
 }

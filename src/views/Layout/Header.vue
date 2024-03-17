@@ -51,10 +51,7 @@ const modalRef: any = ref(null)
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
 
 const menus: any[] = [
-  // {
-  //   text: '导入用户',
-  //   key: 'import'
-  // }
+
 ]
 
 const logout = () => {

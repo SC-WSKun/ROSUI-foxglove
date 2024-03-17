@@ -471,6 +471,7 @@ export default class DrawManage {
     )
     this.car.style.left = `${x}px`
     this.car.style.top = `${this.imgWrap.offsetHeight - y}px`
+    this.car.style.transform = `rotate(${-this.carPose.yaw}deg)`
     this.imgWrap?.appendChild(this.car)
   }
 
@@ -618,7 +619,7 @@ const mapToBaseFootprint = (
   const finalTranslationX = mapToOdom.translation.x + rotatedOdomToBaseX
   const finalTranslationY = mapToOdom.translation.y + rotatedOdomToBaseY
   // 对于旋转，直接将两个偏航角相加
-  const finalYaw = mapToOdomYaw + odomToBaseYaw
+  const finalYaw = (mapToOdomYaw + odomToBaseYaw) * (180 / Math.PI)
 
   return {
     x: finalTranslationX,

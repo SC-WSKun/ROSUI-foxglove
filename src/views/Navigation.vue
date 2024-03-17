@@ -425,6 +425,7 @@ onBeforeUnmount(() => {
     width: 25%;
     height: 100%;
     background: #fff;
+    overflow: auto;
 
     .btn {
       width: 100%;

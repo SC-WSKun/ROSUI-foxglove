@@ -329,6 +329,7 @@ onBeforeUnmount(() => {
     width: 25%;
     height: 100%;
     background: #fff;
+    overflow: auto;
 
     .build {
       margin-top: 20px;
