@@ -59,14 +59,8 @@ export default {
 
     app.component('JoyStick', JoyStick)
 
-    const components = import.meta.glob('@/base/*.vue')
+    const components = import.meta.glob(['@/base/*.vue', '@/icons/*.vue'])
     for (const [key, value] of Object.entries(components)) {
-      const name = key.slice(key.lastIndexOf('/') + 1, key.lastIndexOf('.'))
-      app.component(name, defineAsyncComponent(value as any))
-    }
-
-    const customIcons = import.meta.glob('@/icons/*.vue')
-    for (const [key, value] of Object.entries(customIcons)) {
       const name = key.slice(key.lastIndexOf('/') + 1, key.lastIndexOf('.'))
       app.component(name, defineAsyncComponent(value as any))
     }

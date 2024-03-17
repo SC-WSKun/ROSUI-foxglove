@@ -32,7 +32,13 @@
         <!-- 导航 -->
         <div class="btn" v-if="state.curState === 3">
           <JoyStick></JoyStick>
-          <a-button @click="connectMap">连接地图</a-button>
+          <a-button
+            @click="confirmConnect"
+            type="primary"
+            v-if="state.connecting"
+            >确认连接</a-button
+          >
+          <a-button @click="connectMap" v-else>连接地图</a-button>
           <div class="switch">
             <a-switch
               v-model:checked="state.navigating"
@@ -40,7 +46,9 @@
             ></a-switch
             >导航模式
           </div>
-
+          <a-button @click="crossNav" type="primary" v-if="!state.connecting"
+            >跨图导航</a-button
+          >
           <a-button @click="closeNav" type="primary" danger>结束导航</a-button>
         </div>
         <!-- 暂停导航 -->
@@ -48,6 +56,10 @@
           <a-button @click="subscribeMapTopic">恢复导航</a-button>
           <a-button @click="selectMap">重新选择地图</a-button>
         </div>
+        <!-- 等待确认连接 -->
+        <!-- <div class="btn" v-if="state.curState === 5">
+          <a-button @click="confirmConnect">确认连接</a-button>
+        </div> -->
       </a-card>
     </div>
     <Modal ref="modalRef" />
@@ -78,6 +90,7 @@ interface State {
   connecting: boolean
   curState: number
   navigating: boolean
+  crossing: boolean
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -95,7 +108,8 @@ const state = reactive<State>({
   goalChannelId: undefined,
   connecting: false,
   curState: 0,
-  navigating: false
+  navigating: false,
+  crossing: false
 })
 
 const modalRef: any = ref(null)
@@ -127,40 +141,49 @@ const tableOptions: TableOptions = {
       disabled: (record: Map) => {
         return record.map_name === state.selectedMap?.map_name
       },
-      callback: (record: Map) => {
+      callback: async (record: Map) => {
+        // 校验地图是否连通
+        if (state.crossing) {
+          const pathRes: any = await foxgloveClientStore.callService(
+            '/tiered_nav_state_machine/query_path_to_map',
+            {
+              to_map: record.map_name
+            }
+          )
+          if (!pathRes.result) {
+            globalStore.setLoading(false)
+            message.error('地图不连通，请重新选择')
+            return
+          }
+        }
         globalStore.setLoading(true, '加载地图中')
         state.selectedMap = record
         if (state.selectedMap) {
-          foxgloveClientStore.stopListenMessage(mapMsgHandler)
-          foxgloveClientStore.unSubscribeTopic(state.mapSubId)
-          state.drawManage.removeArrow()
-          state.mapSubId = -1
+          // foxgloveClientStore.stopListenMessage(mapMsgHandler)
+          // foxgloveClientStore.unSubscribeTopic(state.mapSubId)
+          // state.drawManage.removeArrow()
+          // state.mapSubId = -1
         }
+
         foxgloveClientStore
           .callService('/tiered_nav_state_machine/get_grid_map', {
             info: record
           })
           .then((res) => {
             console.log(res)
-            if (state.connecting) {
-              modalRef.value.closeModal()
-              // 调用服务连接地图
-              // foxgloveClientStore
-              //   .callService(
-              //     '/tiered_nav_state_machine/add_cur_pose_as_edge',
-              //     {}
-              //   )
-              //   .then((res) => {
-              //     if (res === 0) message.success('连接成功')
-              //   })
-              message.success('连接成功')
-            }
             const wrap = document.getElementById('navigationMap') as HTMLElement
             state.drawManage.drawGridMap(wrap, res.map, true)
             state.panzoomIns = state.drawManage.panzoomIns
             state.imgWrap = state.drawManage.imgWrap
             state.curState = STATE_MAP.PREVIEWING
             globalStore.setLoading(false)
+            if (state.connecting || state.crossing) {
+              state.drawManage.unSubscribeCarPosition()
+              state.drawManage.unSubscribeScanPoints()
+              unSubscribeMapTopic()
+              initPose()
+              modalRef.value.closeModal()
+            }
           })
           .catch((err) => {
             console.log(err)
@@ -190,51 +213,62 @@ const listMaps = () => {
 
 // 指定初始位姿
 const initPose = () => {
-  // state.panzoomIns?.reset()
+  state.drawManage.navDisabled = true
   state.adding = true
   state.drawManage.pzRemoveListener()
   state.drawManage.navAddListener()
   state.curState = STATE_MAP.INITING
   notification.success({
     placement: 'topRight',
-    message: '请在地图按下并拖动鼠标来指定初始位姿',
+    message: `请在地图按下并拖动鼠标来指定${
+      state.crossing ? '导航目标位姿' : '初始位姿'
+    }`,
     duration: 3
   })
 }
 
 // 完成初始位姿指定
-const finishAdding = () => {
+const finishAdding = async () => {
   state.adding = false
   globalStore.setLoading(true)
   state.drawManage.subscribeCarPosition()
   state.drawManage.subscribeScanPoints()
-  foxgloveClientStore
-    .callService('/tiered_nav_state_machine/switch_mode', {
-      mode: 2
-    })
-    .then(() => {
-      foxgloveClientStore
-        .callService('/tiered_nav_state_machine/load_map', {
-          p: {
-            map_name: state.selectedMap?.map_name,
-            t: {
-              translation: state.drawManage.navTranslation,
-              rotation: state.drawManage.navRotation
-            }
+  if (!state.connecting && !state.crossing)
+    await foxgloveClientStore.callService(
+      '/tiered_nav_state_machine/switch_mode',
+      {
+        mode: 2
+      }
+    )
+  // 跨图导航
+  if (state.crossing) {
+    state.drawManage.publishNavigation(state.selectedMap?.map_name)
+    subscribeMapTopic()
+  } else {
+    // 指定初始位姿或连接点
+    foxgloveClientStore
+      .callService('/tiered_nav_state_machine/load_map', {
+        p: {
+          map_name: state.selectedMap?.map_name,
+          t: {
+            translation: state.drawManage.navTranslation,
+            rotation: state.drawManage.navRotation
           }
-        })
-        .then(() => {
-          subscribeMapTopic()
-          state.drawManage.advertiseNavTopic()
-        })
-    })
+        }
+      })
+      .then(() => {
+        subscribeMapTopic()
+        state.drawManage.advertiseNavTopic()
+        state.drawManage.navDisabled = false
+        globalStore.setLoading(false)
+      })
+  }
 }
 
 // 订阅map话题
 const subscribeMapTopic = () => {
   globalStore.setLoading(true)
   state.curState = STATE_MAP.NAVIGATING
-  // state.drawManage.launchNavigation()
   state.drawManage.navRemoveListener()
   state.drawManage.pzAddListener()
   globalStore.setLoading(false)
@@ -248,6 +282,13 @@ const subscribeMapTopic = () => {
       globalStore.setLoading(false)
     })
   }
+}
+
+// 停止订阅map话题
+const unSubscribeMapTopic = () => {
+  foxgloveClientStore.stopListenMessage(mapMsgHandler)
+  foxgloveClientStore.unSubscribeTopic(state.mapSubId)
+  state.mapSubId = -1
 }
 
 // 地图消息监听回调
@@ -269,24 +310,14 @@ const mapMsgHandler = ({
 
 // 连接地图
 const connectMap = () => {
+  state.connecting = true
   modalRef.value.openModal({
-    title: '温馨提示',
-    type: 'normal',
-    content: '确定以当前位置作为地图连接点吗？',
-    callback: () => {
-      state.connecting = true
-      modalRef.value.openModal({
-        title: '选择地图',
-        type: 'table',
-        tableOptions,
-        dataSource: state.maps,
-        closeModal: false,
-        showMessage: false,
-        callback: () => {
-          modalRef.value.closeModal()
-        }
-      })
-    }
+    title: '选择地图',
+    type: 'table',
+    tableOptions,
+    dataSource: state.maps,
+    showMessage: false,
+    showFooter: false
   })
 }
 
@@ -294,6 +325,39 @@ const connectMap = () => {
 const selectMap = () => {
   state.curState = STATE_MAP.SELECTING
   listMaps()
+}
+
+// 确认连接地图
+const confirmConnect = () => {
+  modalRef.value.openModal({
+    title: '提示',
+    type: 'normal',
+    content: '确定以当前位置作为连接点吗？',
+    callback: () => {
+      console.log('连接地图')
+      // 调用服务连接地图
+
+      foxgloveClientStore
+        .callService('/tiered_nav_state_machine/add_cur_pose_as_edge', {})
+        .then((res1) => {
+          console.log('connect res', res1)
+          if (res1 === 0) message.success('连接成功')
+          state.connecting = false
+        })
+    }
+  })
+}
+
+// 跨图导航
+const crossNav = () => {
+  state.crossing = true
+  modalRef.value.openModal({
+    title: '跨图导航',
+    type: 'table',
+    tableOptions,
+    dataSource: state.maps,
+    showFooter: false
+  })
 }
 
 // 开/关导航模式(能够选择导航点)
@@ -314,7 +378,7 @@ const switchNavigation = () => {
 
 // 结束导航
 const closeNav = () => {
-  // state.drawManage.closeNavigation()
+  state.navigating = false
   state.drawManage.navRemoveListener()
   state.drawManage.pzAddListener()
   state.curState = STATE_MAP.PAUSING
@@ -332,7 +396,7 @@ onBeforeUnmount(() => {
   state.drawManage?.navRemoveListener()
   state.drawManage.unSubscribeCarPosition()
   state.drawManage.unSubscribeScanPoints()
-  state.drawManage.closeNavigation()
+  state.drawManage.unAdvertiseNavTopic()
 })
 </script>
 
@@ -366,8 +430,9 @@ onBeforeUnmount(() => {
       width: 100%;
       .flex(center, center);
       gap: 10px;
+      flex-wrap: wrap;
       .switch {
-        display: flex;
+        .flex;
         gap: 5px;
       }
     }

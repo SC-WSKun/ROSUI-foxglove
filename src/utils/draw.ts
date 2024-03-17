@@ -50,6 +50,7 @@ export default class DrawManage {
   odomToBaseFootprint: Transform | null = null
   baseScanToBaseLink: Transform | null = null
   baseLinkToBaseFootprint: Transform | null = null
+  navDisabled: boolean = false
 
   constructor() {
     this.foxgloveClientStore = useFoxgloveClientStore()
@@ -291,7 +292,7 @@ export default class DrawManage {
       message.error('map_info not found!')
       return
     }
-    // 像素坐标 -> 栅格坐标 -> 真实世界坐标
+    // 获取真实世界坐标
     const { x, y } = pixelToWorldCoordinate(
       event.offsetX,
       event.offsetY,
@@ -352,23 +353,25 @@ export default class DrawManage {
       y
     )
     // 处于导航模式
-    if (this.goalChannelId !== undefined) {
-      this.foxgloveClientStore.publishMessage(this.goalChannelId, {
-        header: {
-          seq: this.goalSeq++,
-          stamp: {
-            secs: Math.floor(Date.now() / 1000),
-            nsecs: (Date.now() / 1000) * 1000000
-          },
-          frame_id: 'map'
-        },
-        pose: {
-          position: this.navTranslation,
-          orientation: this.navRotation
-        }
-      })
+    if (this.goalChannelId !== undefined && !this.navDisabled) {
+      this.publishNavigation()
+      // this.foxgloveClientStore.publishMessage(this.goalChannelId, {
+      //   header: {
+      //     seq: this.goalSeq++,
+      //     stamp: {
+      //       secs: Math.floor(Date.now() / 1000),
+      //       nsecs: (Date.now() / 1000) * 1000000
+      //     },
+      //     frame_id: 'map'
+      //   },
+      //   pose: {
+      //     position: this.navTranslation,
+      //     orientation: this.navRotation
+      //   }
+      // })
     }
     // 隐藏箭头
+    this.removeArrow()
     // this.imgWrap?.removeChild(this.arrow!)
     console.log('rotation', this.navRotation)
   }
@@ -392,6 +395,7 @@ export default class DrawManage {
   advertiseNavTopic() {
     // if (this.panzoomIns) this.pzRemoveListener()
     // this.navAddListener()
+    if (this.goalChannelId !== undefined) return
     this.goalChannelId = this.foxgloveClientStore.advertiseTopic({
       encoding: 'cdr',
       schema:
@@ -404,10 +408,10 @@ export default class DrawManage {
   }
 
   // 关闭导航
-  closeNavigation() {
-    this.navRemoveListener()
-    this.goalChannelId = undefined
+  unAdvertiseNavTopic() {
+    if (this.goalChannelId === undefined) return
     this.foxgloveClientStore.unAdvertiseTopic(this.goalChannelId)
+    this.goalChannelId = undefined
     message.warning('导航模式已关闭')
   }
 
@@ -428,6 +432,8 @@ export default class DrawManage {
   unSubscribeCarPosition() {
     this.foxgloveClientStore.stopListenMessage(this.carPositionListener)
     this.foxgloveClientStore.unSubscribeTopic(this.tfSubId)
+    // 清除小车
+    this.imgWrap?.removeChild(this.car as HTMLElement)
   }
 
   // 监听扫描红点
@@ -445,6 +451,7 @@ export default class DrawManage {
   unSubscribeScanPoints() {
     this.foxgloveClientStore.stopListenMessage(this.scanPointsListener)
     this.foxgloveClientStore.unSubscribeTopic(this.scanSubId)
+    if (this.pointsWrap) this.pointsWrap.innerHTML = ''
   }
 
   // 在地图上更新小车位置
@@ -491,6 +498,24 @@ export default class DrawManage {
       pointEl.style.left = `${x}px`
       pointEl.style.top = `${this.imgWrap!.offsetHeight - y}px`
       this.pointsWrap!.appendChild(pointEl)
+    })
+  }
+
+  // 发布导航信息
+  publishNavigation(frame_id: string = 'map') {
+    this.foxgloveClientStore.publishMessage(this.goalChannelId, {
+      header: {
+        seq: this.goalSeq++,
+        stamp: {
+          secs: Math.floor(Date.now() / 1000),
+          nsecs: (Date.now() / 1000) * 1000000
+        },
+        frame_id
+      },
+      pose: {
+        position: this.navTranslation,
+        orientation: this.navRotation
+      }
     })
   }
 }

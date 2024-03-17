@@ -63,7 +63,7 @@ const modalState: ModalState = reactive({
   showFooter: true,
   showMessage: true,
   content: undefined,
-  closeModal: undefined
+  // closeModal: undefined
 })
 
 let propsData: any = undefined
@@ -88,7 +88,7 @@ const openModal = (modalOptions: ModalOptions) => {
     showFooter,
     showMessage,
     content,
-    closeModal
+    // closeModal
   } = modalOptions
   modalState.title = title
   modalState.type = type || 'normal'
@@ -100,7 +100,7 @@ const openModal = (modalOptions: ModalOptions) => {
   modalState.showFooter = showFooter === undefined ? true : showFooter
   modalState.showMessage = showMessage === undefined ? true : showMessage
   modalState.content = content
-  modalState.closeModal = closeModal === undefined ? true : closeModal
+  // modalState.closeModal = closeModal === undefined ? true : closeModal
   customComponent = component
   propsData = props
   
@@ -120,7 +120,7 @@ const openModal = (modalOptions: ModalOptions) => {
       if (callback)
         await callback(formRef?.value?.formFields || customRef?.value?.data)
       if (modalState.showMessage) message.success(doneMsg || '操作成功')
-      if(modalState.closeModal) modalState.open = false
+      // if(modalState.closeModal) modalState.open = false
     } catch (err) {
       console.error(err);
       return

@@ -91,7 +91,7 @@ export interface ModalOptions {
   showFooter?: boolean
   showMessage?: boolean
   content?: string
-  closeModal?: boolean
+  // closeModal?: boolean
 }
 
 export interface UploadOptions {
