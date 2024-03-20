@@ -12,6 +12,7 @@ import {
 import { MessageReader, MessageWriter } from '@foxglove/rosmsg2-serialization'
 import _ from 'lodash'
 import { parse as parseMessageDefinition } from '@foxglove/rosmsg'
+import { hexdump, concatenateUint8Arrays } from '@/utils/core'
 
 interface Sub {
   subId: number
@@ -26,6 +27,8 @@ interface FoxgloveClientStoreState {
   advertisedChannels: any[]
   msgEncoding: string
   callServiceId: number
+  jsonData: string
+  binaryData: Uint8Array
 }
 
 export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
@@ -36,18 +39,49 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     subs: [], // subscribed channels
     advertisedChannels: [], // advertised channels from client
     msgEncoding: 'cdr', // message encoding
-    callServiceId: 0 // service call id
+    callServiceId: 0, // service call id
+    jsonData: '',
+    binaryData: new Uint8Array()
   }
 
   const foxgloveClientConnected = computed(() => state.client !== null)
 
   /**
    * init the client & storage channels and services
-   * @param ws
+   * @param dataChannel
    */
-  function initClient(ws: IWebSocket) {
+  function initClient(dataChannel: RTCDataChannel) {
     state.client = new FoxgloveClient({
-      ws
+      ws: dataChannel
+    })
+    state.client.on('message', (e: any) => {
+      console.log('message', e.data.buffer);
+    })
+    dataChannel.addEventListener('message', (event: MessageEvent) => {
+      const data = event.data
+      if (data instanceof ArrayBuffer) {
+        const byteArray = new Uint8Array(data)
+        const packType = byteArray[0]
+        const newData = new Uint8Array(data.slice(1))
+        state.binaryData = concatenateUint8Arrays(state.binaryData, newData)
+        if (packType === 2) {
+          state.binaryData = new Uint8Array()
+        }
+      } else if (typeof data === 'string') {
+        if (data.endsWith('}')) {
+          state.jsonData += data
+          try {
+            console.log('jsonData', JSON.parse(state.jsonData))
+            handleJsonMsg(JSON.parse(state.jsonData))
+          } catch (error) {
+            console.log('jsonData', eval(`(${state.jsonData})`))
+            handleJsonMsg(eval(`(${state.jsonData})`))
+          }
+          state.jsonData = ''
+        } else {
+          state.jsonData += data
+        }
+      }
     })
     state.client.on('advertise', (channels: Channel[]) => {
       channels.forEach((channel: Channel) => {
@@ -67,8 +101,9 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     state.client.on('open', () => {
       message.success('Connected successfully!')
     })
-    state.client.on('error', () => {
-      message.error('Failed to connect!')
+    state.client.on('error', (e) => {
+      // console.error(e)
+      // message.error('Failed to connect!')
     })
     state.client.on('close', () => {
       message.warning('Connection closed!')
@@ -97,6 +132,37 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
       state.client = null
     }
     message.info('Connection closed!')
+  }
+
+  function handleJsonMsg(data: any) {
+    if (!data.op) {
+      console.log('invalid data', data)
+      return
+    }
+    switch (data.op) {
+      case 'serverInfo':
+        if (data.supportedEncodings) {
+          state.msgEncoding = data.supportedEncodings[0]
+        }
+        break
+      case 'advertise':
+        data.channels.forEach((channel: Channel) => {
+          state.channels.set(channel.id, channel)
+        })
+        // console.log('current', state.channels)
+        break
+      case 'unadvertise':
+        data.channelIds.forEach((id: number) => {
+          state.channels.delete(id)
+        })
+        // console.log('current', state.channels)
+        break
+      case 'advertiseServices':
+        state.services.push(...data.services)
+        break
+      default:
+        console.log('other msg', data)
+    }
   }
 
   /**
@@ -203,8 +269,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
         )
         const reader = new MessageReader(parseResDefinitions)
         console.log('res.data', response.data)
-        console.log('reader', reader);
-        
+        console.log('reader', reader)
 
         const res = reader.readMessage(response.data)
         resolve(res)
