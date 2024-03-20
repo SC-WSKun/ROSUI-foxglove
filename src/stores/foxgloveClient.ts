@@ -12,7 +12,7 @@ import {
 import { MessageReader, MessageWriter } from '@foxglove/rosmsg2-serialization'
 import _ from 'lodash'
 import { parse as parseMessageDefinition } from '@foxglove/rosmsg'
-import { hexdump, concatenateUint8Arrays } from '@/utils/core'
+import type P2PSocket from '@/utils/p2psocket'
 
 interface Sub {
   subId: number
@@ -48,40 +48,16 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
 
   /**
    * init the client & storage channels and services
-   * @param dataChannel
+   * @param socket
    */
-  function initClient(dataChannel: RTCDataChannel) {
+  function initClient(socket: P2PSocket) {
     state.client = new FoxgloveClient({
-      ws: dataChannel
+      ws: socket
     })
+    console.log('client', state.client);
+    
     state.client.on('message', (e: any) => {
       console.log('message', e.data.buffer);
-    })
-    dataChannel.addEventListener('message', (event: MessageEvent) => {
-      const data = event.data
-      if (data instanceof ArrayBuffer) {
-        const byteArray = new Uint8Array(data)
-        const packType = byteArray[0]
-        const newData = new Uint8Array(data.slice(1))
-        state.binaryData = concatenateUint8Arrays(state.binaryData, newData)
-        if (packType === 2) {
-          state.binaryData = new Uint8Array()
-        }
-      } else if (typeof data === 'string') {
-        if (data.endsWith('}')) {
-          state.jsonData += data
-          try {
-            console.log('jsonData', JSON.parse(state.jsonData))
-            handleJsonMsg(JSON.parse(state.jsonData))
-          } catch (error) {
-            console.log('jsonData', eval(`(${state.jsonData})`))
-            handleJsonMsg(eval(`(${state.jsonData})`))
-          }
-          state.jsonData = ''
-        } else {
-          state.jsonData += data
-        }
-      }
     })
     state.client.on('advertise', (channels: Channel[]) => {
       channels.forEach((channel: Channel) => {
@@ -102,7 +78,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
       message.success('Connected successfully!')
     })
     state.client.on('error', (e) => {
-      // console.error(e)
+      console.error(e)
       // message.error('Failed to connect!')
     })
     state.client.on('close', () => {

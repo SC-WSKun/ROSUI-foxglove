@@ -6,10 +6,8 @@ import App from './App.vue'
 import router from './router'
 
 import Global from './plugin/global'
-import {
-  FoxgloveClient,
-  type IWebSocket
-} from '@foxglove/ws-protocol'
+import { FoxgloveClient, type IWebSocket } from '@foxglove/ws-protocol'
+import P2PSocket from './utils/p2psocket'
 
 const app = createApp(App)
 
@@ -61,7 +59,8 @@ socket.onmessage = (event) => {
 
       dataChannel.addEventListener('open', (event) => {
         console.log('datachannel opened.')
-        foxgloveClientStore.initClient(dataChannel!)
+        foxgloveClientStore.initClient(new P2PSocket(dataChannel!))
+        // foxgloveClientStore.initClient(dataChannel!)
       })
 
       startSession()
