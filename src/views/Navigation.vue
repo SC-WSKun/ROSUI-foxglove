@@ -9,8 +9,12 @@
         :bordered="false"
         style="width: 100%; height: 100%"
       >
-        <!-- 选择地图 -->
-        <div class="select" v-if="state.curState === 0">
+        <!-- 0. 等待用户获取地图列表 -->
+        <div class="btn" v-if="state.curState === 0">
+          <a-button @click="listMaps" type="primary">获取地图列表</a-button>
+        </div>
+        <!-- 1. 选择地图 -->
+        <div class="select" v-if="state.curState === 1">
           <div class="list">
             <Table
               :tableOptions="tableOptions"
@@ -19,18 +23,16 @@
             ></Table>
           </div>
         </div>
-        <!-- 预览 -->
-        <div class="btn" v-if="state.curState === 1">
+        <!-- 2. 预览 -->
+        <div class="btn" v-if="state.curState === 2">
           <a-button @click="initPose">指定初始位姿</a-button>
         </div>
-        <!-- 指定初始位姿 -->
-        <div class="btn" v-if="state.curState === 2">
-          <a-button type="primary" v-if="state.adding" @click="finishAdding">
-            完成
-          </a-button>
-        </div>
-        <!-- 导航 -->
+        <!-- 3. 指定初始位姿 -->
         <div class="btn" v-if="state.curState === 3">
+          <a-button type="primary" @click="finishAdding"> 完成 </a-button>
+        </div>
+        <!-- 4. 导航 -->
+        <div class="btn" v-if="state.curState === 4">
           <JoyStick></JoyStick>
           <a-button
             @click="confirmConnect"
@@ -51,42 +53,31 @@
           >
           <a-button @click="closeNav" type="primary" danger>结束导航</a-button>
         </div>
-        <!-- 暂停导航 -->
-        <div class="btn" v-if="state.curState === 4">
+        <!-- 5. 暂停导航 -->
+        <div class="btn" v-if="state.curState === 5">
           <a-button @click="subscribeMapTopic">恢复导航</a-button>
           <a-button @click="selectMap">重新选择地图</a-button>
         </div>
-        <!-- 等待确认连接 -->
-        <!-- <div class="btn" v-if="state.curState === 5">
-          <a-button @click="confirmConnect">确认连接</a-button>
-        </div> -->
       </a-card>
     </div>
-    <Modal ref="modalRef" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useGlobalStore } from '@/stores/global'
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive } from 'vue'
 import { type GridMap, type Map } from '@/typings'
 import type { TableOptions } from '@/typings/component'
 import type { MessageData } from '@foxglove/ws-protocol'
 import DrawManage from '@/utils/draw'
-import { type PanzoomObject } from '@panzoom/panzoom'
 import { message, notification } from 'ant-design-vue'
 
 interface State {
   maps: Map[]
   selectedMap: Map | null
-  panzoomIns: PanzoomObject | null
-  imgWrap: HTMLElement | null
-  adding: boolean
   mapSubId: number
   drawManage: DrawManage
-  initFinish: boolean
-  goalChannelId: number | undefined
   connecting: boolean
   curState: number
   navigating: boolean
@@ -99,27 +90,21 @@ const globalStore = useGlobalStore()
 const state = reactive<State>({
   maps: [],
   selectedMap: null,
-  panzoomIns: null,
-  imgWrap: null,
-  adding: false,
   mapSubId: -1,
   drawManage: new DrawManage(),
-  initFinish: false,
-  goalChannelId: undefined,
-  connecting: false,
-  curState: 0,
-  navigating: false,
-  crossing: false
+  connecting: false, // 连接地图ing
+  curState: 0, // 当前状态step
+  navigating: false, // 导航ing
+  crossing: false // 跨图导航ing
 })
 
-const modalRef: any = ref(null)
-
 const STATE_MAP = {
-  SELECTING: 0, // 选择地图
-  PREVIEWING: 1, // 预览地图
-  INITING: 2, // 初始化位姿
-  NAVIGATING: 3, // 导航
-  PAUSING: 4 // 暂停
+  WAITINT: 0, // 等待获取地图
+  SELECTING: 1, // 选择地图
+  PREVIEWING: 2, // 预览地图
+  INITING: 3, // 初始化位姿
+  NAVIGATING: 4, // 导航
+  PAUSING: 5 // 暂停
 }
 
 // 地图列表表格配置项
@@ -142,7 +127,7 @@ const tableOptions: TableOptions = {
         return record.map_name === state.selectedMap?.map_name
       },
       callback: async (record: Map) => {
-        // 校验地图是否连通
+        // 跨图导航时校验地图是否连通
         if (state.crossing) {
           const pathRes: any = await foxgloveClientStore.callService(
             '/tiered_nav_state_machine/query_path_to_map',
@@ -158,23 +143,14 @@ const tableOptions: TableOptions = {
         }
         globalStore.setLoading(true, '加载地图中')
         state.selectedMap = record
-        if (state.selectedMap) {
-          // foxgloveClientStore.stopListenMessage(mapMsgHandler)
-          // foxgloveClientStore.unSubscribeTopic(state.mapSubId)
-          // state.drawManage.removeArrow()
-          // state.mapSubId = -1
-        }
 
         foxgloveClientStore
           .callService('/tiered_nav_state_machine/get_grid_map', {
             info: record
           })
           .then((res) => {
-            console.log(res)
             const wrap = document.getElementById('navigationMap') as HTMLElement
             state.drawManage.drawGridMap(wrap, res.map, true)
-            state.panzoomIns = state.drawManage.panzoomIns
-            state.imgWrap = state.drawManage.imgWrap
             state.curState = STATE_MAP.PREVIEWING
             globalStore.setLoading(false)
             if (state.connecting || state.crossing) {
@@ -182,7 +158,7 @@ const tableOptions: TableOptions = {
               state.drawManage.unSubscribeScanPoints()
               unSubscribeMapTopic()
               initPose()
-              modalRef.value.closeModal()
+              globalStore.state.modalRef.closeModal()
             }
           })
           .catch((err) => {
@@ -192,7 +168,8 @@ const tableOptions: TableOptions = {
       }
     }
   ],
-  actionWidth: 50
+  actionWidth: 50,
+  pagination: true
 }
 
 // 获取地图列表
@@ -202,8 +179,8 @@ const listMaps = () => {
   foxgloveClientStore
     .callService('/tiered_nav_conn_graph/list_maps', {})
     .then((res) => {
-      console.log(res)
       state.maps = res.maps
+      state.curState = STATE_MAP.SELECTING
       globalStore.setLoading(false)
     })
     .catch((err) => {
@@ -214,7 +191,6 @@ const listMaps = () => {
 // 指定初始位姿
 const initPose = () => {
   state.drawManage.navDisabled = true
-  state.adding = true
   state.drawManage.pzRemoveListener()
   state.drawManage.navAddListener()
   state.curState = STATE_MAP.INITING
@@ -229,7 +205,6 @@ const initPose = () => {
 
 // 完成初始位姿指定
 const finishAdding = async () => {
-  state.adding = false
   globalStore.setLoading(true)
   state.drawManage.subscribeCarPosition()
   state.drawManage.subscribeScanPoints()
@@ -275,7 +250,6 @@ const subscribeMapTopic = () => {
   if (state.mapSubId === -1) {
     globalStore.setLoading(true)
     foxgloveClientStore.subscribeTopic('/map').then((res) => {
-      state.initFinish = true
       state.mapSubId = res
       foxgloveClientStore.listenMessage(mapMsgHandler)
       state.curState = STATE_MAP.NAVIGATING
@@ -311,7 +285,7 @@ const mapMsgHandler = ({
 // 连接地图
 const connectMap = () => {
   state.connecting = true
-  modalRef.value.openModal({
+  globalStore.state.modalRef.openModal({
     title: '选择地图',
     type: 'table',
     tableOptions,
@@ -329,20 +303,26 @@ const selectMap = () => {
 
 // 确认连接地图
 const confirmConnect = () => {
-  modalRef.value.openModal({
+  globalStore.state.modalRef.openModal({
     title: '提示',
     type: 'normal',
     content: '确定以当前位置作为连接点吗？',
     callback: () => {
       console.log('连接地图')
+      globalStore.setLoading(true, '连接中')
       // 调用服务连接地图
-
       foxgloveClientStore
         .callService('/tiered_nav_state_machine/add_cur_pose_as_edge', {})
         .then((res1) => {
           console.log('connect res', res1)
           if (res1 === 0) message.success('连接成功')
           state.connecting = false
+          globalStore.setLoading(false)
+        })
+        .catch((err) => {
+          console.log(err)
+          globalStore.setLoading(false)
+          message.error('连接失败，请稍后再试')
         })
     }
   })
@@ -351,7 +331,7 @@ const confirmConnect = () => {
 // 跨图导航
 const crossNav = () => {
   state.crossing = true
-  modalRef.value.openModal({
+  globalStore.state.modalRef.openModal({
     title: '跨图导航',
     type: 'table',
     tableOptions,
@@ -384,12 +364,7 @@ const closeNav = () => {
   state.curState = STATE_MAP.PAUSING
 }
 
-onMounted(() => {
-  globalStore.setLoading(true, '地图列表加载中')
-  setTimeout(() => {
-    listMaps()
-  }, 500)
-})
+onMounted(() => {})
 
 onBeforeUnmount(() => {
   state.drawManage?.pzRemoveListener()

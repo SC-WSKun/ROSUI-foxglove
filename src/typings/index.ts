@@ -85,3 +85,8 @@ export type TopicListener = ({
   timestamp,
   data
 }: MessageData) => void
+
+export type serviceResponse = {
+  result: boolean
+  [key: string]: any
+}

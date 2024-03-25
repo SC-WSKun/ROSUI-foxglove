@@ -21,14 +21,27 @@
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { RouterView } from 'vue-router'
 import { useGlobalStore } from './stores/global'
-import { nextTick, onMounted, ref, type Ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, type Ref } from 'vue'
+import { useRtcClientStore } from './stores/rtcClient'
 
 const globalStore = useGlobalStore()
+const rtcClientStore = useRtcClientStore()
 
 const modalRef: any = ref(null)
+let timer: number | null = null
 
 onMounted(() => {
-  globalStore.setModalRef(modalRef.value)
+  timer = setInterval(() => {
+    if (modalRef.value) {
+      globalStore.setModalRef(modalRef.value)
+      clearInterval(timer!)
+      timer = null
+    }
+  }, 10)
+})
+
+onBeforeUnmount(() => {
+  rtcClientStore.closeRtcClient()
 })
 </script>
 

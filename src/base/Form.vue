@@ -55,12 +55,6 @@
                 :unCheckedValue="false"
               ></a-switch>
             </template>
-            <template v-else-if="item.type === 'upload'">
-              <FileUploader
-                v-model="formFields[item.key]"
-                :uploadOptions="item.uploadOptions"
-              ></FileUploader>
-            </template>
             <template v-else-if="item.type === 'password'">
               <a-input-password
                 v-model:value="formFields[item.key]"

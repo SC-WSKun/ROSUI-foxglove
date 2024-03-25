@@ -1,7 +1,7 @@
 <template>
   <div class="build">
     <div class="view" id="buildMap">
-      <div class="tips" v-if="!state.finish && !state.building">
+      <div class="tips" v-if="state.curState === 0">
         暂未建图，点击右侧开始建图
       </div>
     </div>
@@ -53,35 +53,30 @@
               保存地图
             </a-button>
           </div>
-          <JoyStick v-if="state.building && !state.pause"></JoyStick>
+          <JoyStick v-if="state.curState === 1"></JoyStick>
         </div>
       </a-card>
     </div>
-    <Modal ref="modalRef" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, h, onBeforeUnmount } from 'vue'
+import { reactive, h, onBeforeUnmount } from 'vue'
 import {
   CaretRightOutlined,
   PauseOutlined,
-  SaveOutlined,
-  CheckOutlined
+  SaveOutlined
 } from '@ant-design/icons-vue'
 import { message, notification } from 'ant-design-vue'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useGlobalStore } from '@/stores/global'
 import type { MessageData } from '@foxglove/ws-protocol'
-import type { GridMap } from '@/typings'
+import type { GridMap, serviceResponse } from '@/typings'
 import DrawManage from '@/utils/draw'
 import _ from 'lodash'
 
 interface State {
-  building: boolean
   mapSubId: number
-  pause: boolean
-  finish: boolean
   drawManage: DrawManage
   onceLaunchNavigation: (() => void) | null
   curState: number
@@ -91,8 +86,6 @@ interface State {
 const foxgloveClientStore = useFoxgloveClientStore()
 const globalStore = useGlobalStore()
 
-const modalRef: any = ref(null)
-
 const STATE_MAP = {
   WAITING: 0,
   BUILDING: 1,
@@ -100,10 +93,7 @@ const STATE_MAP = {
 }
 
 const state = reactive<State>({
-  building: false,
   mapSubId: -1,
-  pause: false,
-  finish: false,
   drawManage: new DrawManage(),
   onceLaunchNavigation: null,
   curState: 0,
@@ -126,7 +116,6 @@ const mapMsgHandler = ({
     state.drawManage.drawGridMap(wrap, parseData, true)
     if (state.onceLaunchNavigation) {
       state.onceLaunchNavigation()
-      console.log(444)
     }
   }
 }
@@ -137,9 +126,6 @@ const subscribeMapTopic = () => {
     .subscribeTopic('/map')
     .then((res) => {
       state.mapSubId = res
-      state.building = true
-      state.pause = false
-      state.finish = false
       foxgloveClientStore.listenMessage(mapMsgHandler)
     })
     .catch((err: string) => {
@@ -155,69 +141,60 @@ const unSubscribeMapTopic = () => {
 
 // 启动建图模式
 const launchBuild = () => {
-  if (!state.building) {
-    modalRef.value.openModal({
-      title: '开始建图',
-      type: 'form',
-      width: 800,
-      confirmText: '启动',
-      showCancel: true,
-      showMessage: false,
-      formOptions: {
-        items: [
-          {
-            label: '地图类型',
-            key: 'map_type',
-            type: 'select',
-            dictIndex: 'map_type',
-            required: true,
-            placeholder: '请选择地图类型'
-          }
-        ]
-      },
-      callback: (data: { map_type: number }) => {
-        globalStore.setLoading(true, '请稍等')
-        // 切换建图模式
-        foxgloveClientStore
-          .callService('/tiered_nav_state_machine/switch_mode', {
-            mode: 1,
-            map_type: data.map_type
+  globalStore.state.modalRef.openModal({
+    title: '开始建图',
+    type: 'form',
+    width: 800,
+    confirmText: '启动',
+    showCancel: true,
+    showMessage: false,
+    formOptions: {
+      items: [
+        {
+          label: '地图类型',
+          key: 'map_type',
+          type: 'select',
+          dictIndex: 'map_type',
+          required: true,
+          placeholder: '请选择地图类型'
+        }
+      ]
+    },
+    callback: (data: { map_type: number }) => {
+      globalStore.setLoading(true, '请稍等')
+      // 切换建图模式
+      foxgloveClientStore
+        .callService('/tiered_nav_state_machine/switch_mode', {
+          mode: 1,
+          map_type: data.map_type
+        })
+        ?.then((res) => {
+          globalStore.setLoading(false)
+          state.curState = STATE_MAP.BUILDING
+          subscribeMapTopic()
+          state.onceLaunchNavigation = _.once(() => {
+            state.drawManage.pzAddListener()
+            state.drawManage.advertiseNavTopic()
           })
-          ?.then((res) => {
-            globalStore.setLoading(false)
-            state.curState = STATE_MAP.BUILDING
-            subscribeMapTopic()
-            state.onceLaunchNavigation = _.once(() => {
-              state.drawManage.pzAddListener()
-              state.drawManage.advertiseNavTopic()
-            })
-            state.drawManage.subscribeCarPosition()
-            state.drawManage.subscribeScanPoints()
-          })
-          .catch((err) => {
-            globalStore.setLoading(false)
-            console.log(err)
-            message.error('Call service failed')
-          })
-      }
-    })
-  } else {
-    foxgloveClientStore.unSubscribeTopic(state.mapSubId)
-    state.building = false
-    state.finish = true
-    state.mapSubId = -1
-  }
+          state.drawManage.subscribeCarPosition()
+          state.drawManage.subscribeScanPoints()
+        })
+        .catch((err) => {
+          globalStore.setLoading(false)
+          console.log(err)
+          message.error('切换建图模式失败，请稍后再试')
+        })
+    }
+  })
 }
 
 // 建图暂停/继续
 const switchBuild = () => {
-  if (state.pause) {
-    state.pause = false
+  if (state.curState === STATE_MAP.PAUSING) {
     state.curState = STATE_MAP.BUILDING
     foxgloveClientStore.listenMessage(mapMsgHandler)
     message.success('建图继续')
-  } else {
-    state.pause = true
+  } else if (state.curState === STATE_MAP.BUILDING) {
     state.curState = STATE_MAP.PAUSING
     foxgloveClientStore.stopListenMessage(mapMsgHandler)
     state.navigating = false
@@ -242,26 +219,15 @@ const switchNavigation = () => {
   }
 }
 
-// 终止建图模式
-// const finishBuild = () => {
-//   state.finish = true
-//   state.building = false
-//   state.pause = false
-//   unSubscribeMapTopic()
-//   state.drawManage.unSubscribeCarPosition()
-//   state.drawManage.navRemoveListener()
-//   message.success('建图完成')
-// }
-
 // 保存地图
 const saveMap = () => {
-  console.log('save', globalStore.state.modalRef)
-  modalRef.value.openModal({
+  globalStore.state.modalRef.openModal({
     title: '保存地图',
     type: 'form',
     width: 800,
     confirmText: '保存',
     showCancel: true,
+    showMsg: false,
     formOptions: {
       items: [
         {
@@ -274,24 +240,33 @@ const saveMap = () => {
         }
       ]
     },
-    callback: (data: { name: string }) => {
+    callback: async (data: { name: string }) => {
       console.log(data)
+      const res: serviceResponse = await foxgloveClientStore.callService(
+        '/tiered_nav_conn_graph/query_map',
+        {
+          map_name: data.name
+        }
+      )
+      if (res.result) {
+        message.error('地图名称已存在')
+        throw new Error('地图名称已存在')
+      }
+      globalStore.setLoading(true, '地图保存中')
+      // 保存地图
       foxgloveClientStore
         .callService('/tiered_nav_state_machine/save_map', {
           name: data.name
         })
         .then((res: any) => {
           console.log('save_res', res)
-          foxgloveClientStore.callService(
-            '/tiered_nav_state_machine/switch_mode',
-            {
-              mode: 0
-            }
-          )
+          globalStore.setLoading(false)
+          message.success('保存地图成功')
         })
         .catch((err) => {
           console.log(err)
           message.error('保存地图失败')
+          globalStore.setLoading(false)
         })
     }
   })

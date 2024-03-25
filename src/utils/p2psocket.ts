@@ -1,5 +1,6 @@
 import type { IWebSocket } from '@foxglove/ws-protocol'
 
+// This is a simple wrapper around RTCDataChannel to make it easier to use with the @foxglove/ws-protocol.
 export default class P2PSocket implements IWebSocket {
   dataChannel: RTCDataChannel
   binaryData: Uint8Array = new Uint8Array()

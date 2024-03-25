@@ -1,7 +1,6 @@
 export interface TableOptions {
   items: TableItem[]
   actions?: TableAction[]
-  search?: SearchOptions
   fetch?: () => any
   size?: 'small' | 'middle' | 'large'
   actionWidth?: number
@@ -29,10 +28,6 @@ export interface TableAction {
   disabled?: (record: any) => boolean
 }
 
-export interface SearchOptions extends Partial<FormOptions> {
-  preHook?: (...params: any) => any
-}
-
 export interface FormItem {
   label: string
   key: string
@@ -58,7 +53,6 @@ export interface FormItem {
     value: any
   }[]
   defaultValue?: (record?: any) => any
-  uploadOptions?: UploadOptions
   allowClear?: boolean
   numberOptions?: {
     max: number
@@ -92,25 +86,4 @@ export interface ModalOptions {
   showMessage?: boolean
   content?: string
   // closeModal?: boolean
-}
-
-export interface UploadOptions {
-  fileType: 'image/*' | 'audio/*' | 'video/*'
-  multiple?: boolean
-  max?: number
-}
-
-export interface Step {
-  title: string
-  type: 'form' | 'custom'
-  component?: any
-  formOptions?: FormOptions
-  dataSource?: any
-  props?: any
-}
-
-export interface StepOptions {
-  steps: Step[]
-  dataSource?: any
-  callback?: (data: any) => any
 }

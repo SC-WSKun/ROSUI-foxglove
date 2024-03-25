@@ -49,7 +49,6 @@ const MAX_DISTANCE = 75.0 // pixels
 
 // 处理移动事件
 const handleMove = (linearSpeed: number, angularSpeed: number) => {
-  // publish message to server to move the robot
   foxgloveClientStore.publishMessage(state.channelId!, {
     linear: {
       x: linearSpeed,
@@ -118,7 +117,7 @@ const handleKeyup = (event: KeyboardEvent) => {
 }
 
 onMounted(() => {
-  // advertise a topic for publishing velocity commands
+  // 发布小车控制相关话题
   state.channelId = foxgloveClientStore.advertiseTopic({
     encoding: 'cdr',
     schema:
@@ -128,11 +127,10 @@ onMounted(() => {
     topic: '/cmd_vel_teleop'
   })
   nextTick(() => {
-    // create a joystick manager
     nippleOptions.zone = nippleZone.value
     state.manager = nipplejs.create(nippleOptions)
 
-    // joystick mode control
+    // 摇杆控制
     state.manager.on('start', () => {
       state.stickActive = true
       state.timer = setInterval(
@@ -148,7 +146,7 @@ onMounted(() => {
         (-Math.cos(nipple.angle.radian) * MAX_ANGULAR) / MAX_DISTANCE
     })
 
-    // keyboard mode control
+    // 键盘控制
     document.addEventListener('keydown', handleKeydown)
     document.addEventListener('keyup', handleKeyup)
 

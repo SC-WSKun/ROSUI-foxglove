@@ -1,10 +1,8 @@
-import { computed } from 'vue'
-import { defineStore, type Store } from 'pinia'
+import { defineStore } from 'pinia'
 import { message } from 'ant-design-vue'
 import {
   FoxgloveClient,
   type Channel,
-  type IWebSocket,
   type ClientChannelWithoutId,
   type Service,
   type ServerInfo
@@ -27,8 +25,6 @@ interface FoxgloveClientStoreState {
   advertisedChannels: any[]
   msgEncoding: string
   callServiceId: number
-  jsonData: string
-  binaryData: Uint8Array
 }
 
 export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
@@ -39,12 +35,8 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     subs: [], // subscribed channels
     advertisedChannels: [], // advertised channels from client
     msgEncoding: 'cdr', // message encoding
-    callServiceId: 0, // service call id
-    jsonData: '',
-    binaryData: new Uint8Array()
+    callServiceId: 0 // service call id
   }
-
-  const foxgloveClientConnected = computed(() => state.client !== null)
 
   /**
    * init the client & storage channels and services
@@ -53,11 +45,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
   function initClient(socket: P2PSocket) {
     state.client = new FoxgloveClient({
       ws: socket
-    })
-    console.log('client', state.client);
-    
-    state.client.on('message', (e: any) => {
-      console.log('message', e.data.buffer);
     })
     state.client.on('advertise', (channels: Channel[]) => {
       channels.forEach((channel: Channel) => {
@@ -79,7 +66,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     })
     state.client.on('error', (e) => {
       console.error(e)
-      // message.error('Failed to connect!')
     })
     state.client.on('close', () => {
       message.warning('Connection closed!')
@@ -110,37 +96,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     message.info('Connection closed!')
   }
 
-  function handleJsonMsg(data: any) {
-    if (!data.op) {
-      console.log('invalid data', data)
-      return
-    }
-    switch (data.op) {
-      case 'serverInfo':
-        if (data.supportedEncodings) {
-          state.msgEncoding = data.supportedEncodings[0]
-        }
-        break
-      case 'advertise':
-        data.channels.forEach((channel: Channel) => {
-          state.channels.set(channel.id, channel)
-        })
-        // console.log('current', state.channels)
-        break
-      case 'unadvertise':
-        data.channelIds.forEach((id: number) => {
-          state.channels.delete(id)
-        })
-        // console.log('current', state.channels)
-        break
-      case 'advertiseServices':
-        state.services.push(...data.services)
-        break
-      default:
-        console.log('other msg', data)
-    }
-  }
-
   /**
    * subscribe one of the channels
    * @param topic topic's name
@@ -152,11 +107,9 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     }
     const channel = _.find(Array.from(state.channels.values()), { topic })
     if (!channel) {
-      return Promise.reject('Channel not found')
+      return Promise.reject('Channel not found! Please try again later')
     }
-
     const subId = state.client.subscribe(channel.id)
-
     state.subs.push({
       subId,
       channelId: channel.id
@@ -171,7 +124,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function unSubscribeTopic(subId: number) {
     if (!state.client) {
-      message.error('Client not initialized!')
+      message.error('未识别到连接，请稍后再试')
       return
     }
     // remove from subs list
@@ -187,15 +140,14 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function publishMessage(channelId: number, message: any) {
     if (!state.client) {
-      message.error('Client not initialized!')
+      message.error('未识别到连接，请稍后再试')
       return
     }
     const channel = _.find(state.advertisedChannels, { id: channelId })
     if (!channel) {
-      message.error('Channel not found!')
+      message.error('未发布相关话题，请稍后再试')
       return
     }
-
     const parseDefinitions = parseMessageDefinition(channel.schema, {
       ros2: true
     })
@@ -215,12 +167,12 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     payload: { [key: string]: any }
   ): Promise<any> {
     if (!state.client) {
-      message.error('Client not initialized!')
+      message.error('未识别到连接，请稍后再试')
       return Promise.reject('Client not initialized!')
     }
     const srv: Service | undefined = _.find(state.services, { name: srvName })
     if (!srv) {
-      message.error('Service not found!')
+      message.error('未找到相关服务，请稍后再试')
       return Promise.reject('Service not found!')
     }
     const parseReqDefinitions = parseMessageDefinition(srv?.requestSchema!, {
@@ -244,9 +196,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
           }
         )
         const reader = new MessageReader(parseResDefinitions)
-        console.log('res.data', response.data)
-        console.log('reader', reader)
-
         const res = reader.readMessage(response.data)
         resolve(res)
         state.client?.off('serviceCallResponse', serviceResponseHandler)
@@ -262,7 +211,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function advertiseTopic(channel: ClientChannelWithoutId) {
     if (!state.client) {
-      message.error('Client not initialized!')
+      message.error('未识别到连接，请稍后再试')
       return
     }
     const channelId = state.client.advertise(channel)
@@ -280,7 +229,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function unAdvertiseTopic(channelId: number) {
     if (!state.client) {
-      message.error('Client not initialized!')
+      message.error('未识别到连接，请稍后再试')
       return
     }
     // remove from advertised channels list
@@ -298,20 +247,31 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function listenMessage(callback: (...args: any) => void) {
     if (!state.client) {
-      message.error('Client not initialized!')
+      message.error('未识别到连接，请稍后再试')
       return
     }
     state.client.on('message', callback)
   }
 
+  /**
+   * remove the listener of channel's message
+   * @param callback
+   * @returns
+   */
   function stopListenMessage(callback: (...args: any) => void) {
     if (!state.client) {
-      message.error('Client not initialized!')
+      message.error('未识别到连接，请稍后再试')
       return
     }
     state.client.off('message', callback)
   }
 
+  /**
+   * transform message from channel
+   * @param subId id of the subscription
+   * @param data message from channel
+   * @returns
+   */
   function readMsgWithSubId(subId: number, data: DataView) {
     const sub = _.find(state.subs, { subId })
     if (sub) {
@@ -323,15 +283,13 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
       return reader.readMessage(data)
     } else {
       console.log('sub not found')
-      message.error('sub not found')
+      message.error('未找到相关订阅，请稍后再试')
     }
   }
 
   return {
-    state,
     initClient,
     closeClient,
-    foxgloveClientConnected,
     subscribeTopic,
     unSubscribeTopic,
     listenMessage,

@@ -2,14 +2,12 @@ import { reactive } from 'vue'
 import { defineStore } from 'pinia'
 
 type GlobalState = {
-  loading: boolean,
-  loadingTip: string,
-  // modalRef: typeof Modal | null
+  loading: boolean
+  loadingTip: string
   modalRef: any
 }
 
 export const useGlobalStore = defineStore('global', () => {
-
   const state = reactive<GlobalState>({
     loading: false,
     loadingTip: '加载中...',

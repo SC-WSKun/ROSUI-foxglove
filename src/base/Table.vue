@@ -20,20 +20,6 @@
             )
           }}</a>
         </template>
-        <template v-else-if="column.type === 'file'">
-          <a
-            :href="
-              getFileUrl(getByDictKey(_.get(record, column.dataIndex), column))
-            "
-            target="_blank"
-            >{{
-              getByDictKey(_.get(record, column.dataIndex), column)?.substring(
-                0,
-                13
-              )
-            }}</a
-          >
-        </template>
         <template v-else-if="column.type === 'actions'">
           <template v-for="action in column.actions" :key="action.text">
             <template v-if="!action.showFilter || action.showFilter(record)">
@@ -80,7 +66,6 @@ import { computed, ref, type Ref } from 'vue'
 import type { TableOptions, TableItem } from '@/typings/component'
 import Dict from '@/dict'
 import _ from 'lodash'
-import { downloadUrl } from '@/config'
 
 interface Props {
   tableOptions: TableOptions
@@ -115,9 +100,6 @@ const getByDictKey = (value: any, column?: any) => {
     : value
 }
 
-const getFileUrl = (id: string) => {
-  return downloadUrl + id
-}
 </script>
 
 <style lang="less" scoped>

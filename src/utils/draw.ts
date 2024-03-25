@@ -10,6 +10,7 @@ import { message, notification } from 'ant-design-vue'
 import arrowImage from '@/assets/arrow.png'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import type { MessageData } from '@foxglove/ws-protocol'
+import _ from 'lodash'
 
 export default class DrawManage {
   panzoomIns: PanzoomObject | null = null
@@ -41,6 +42,7 @@ export default class DrawManage {
   scanSubId: number | undefined = undefined
   carPositionListener: TopicListener
   scanPointsListener: TopicListener
+  scanPointsTime: number = 0
   carPose: {
     x: number
     y: number
@@ -118,6 +120,9 @@ export default class DrawManage {
             transform.header.frame_id === 'base_footprint'
         ).transform
       } else if (subscriptionId === this.scanSubId) {
+        const time = new Date().getTime()
+        if (time - this.scanPointsTime < 1000) return
+        this.scanPointsTime = time
         const parseData = this.foxgloveClientStore.readMsgWithSubId(
           subscriptionId,
           data
@@ -210,13 +215,6 @@ export default class DrawManage {
     if (pz && !this.panzoomIns) {
       this.setPanzoom(this.imgWrap)
     }
-
-    // 启动导航点交互
-    // if (this.goalChannelId !== undefined) {
-    //   // 优先移除地图交互监听，避免冲突
-    //   this.pzRemoveListener()
-    //   this.navAddListener()
-    // }
   }
 
   // 为画布添加缩放和平移拖拽功能
@@ -355,20 +353,6 @@ export default class DrawManage {
     // 处于导航模式
     if (this.goalChannelId !== undefined && !this.navDisabled) {
       this.publishNavigation()
-      // this.foxgloveClientStore.publishMessage(this.goalChannelId, {
-      //   header: {
-      //     seq: this.goalSeq++,
-      //     stamp: {
-      //       secs: Math.floor(Date.now() / 1000),
-      //       nsecs: (Date.now() / 1000) * 1000000
-      //     },
-      //     frame_id: 'map'
-      //   },
-      //   pose: {
-      //     position: this.navTranslation,
-      //     orientation: this.navRotation
-      //   }
-      // })
     }
     // 隐藏箭头
     this.removeArrow()
@@ -433,7 +417,7 @@ export default class DrawManage {
     this.foxgloveClientStore.stopListenMessage(this.carPositionListener)
     this.foxgloveClientStore.unSubscribeTopic(this.tfSubId)
     // 清除小车
-    this.imgWrap?.removeChild(this.car as HTMLElement)
+    if (this.car) this.imgWrap?.removeChild(this.car as HTMLElement)
   }
 
   // 监听扫描红点
