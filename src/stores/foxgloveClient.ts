@@ -93,7 +93,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
       state.client.close()
       state.client = null
     }
-    message.info('Connection closed!')
+    message.warning('Connection closed!')
   }
 
   /**
@@ -124,7 +124,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function unSubscribeTopic(subId: number) {
     if (!state.client) {
-      message.error('未识别到连接，请稍后再试')
+      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     // remove from subs list
@@ -140,7 +140,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function publishMessage(channelId: number, message: any) {
     if (!state.client) {
-      message.error('未识别到连接，请稍后再试')
+      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     const channel = _.find(state.advertisedChannels, { id: channelId })
@@ -167,7 +167,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     payload: { [key: string]: any }
   ): Promise<any> {
     if (!state.client) {
-      message.error('未识别到连接，请稍后再试')
+      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return Promise.reject('Client not initialized!')
     }
     const srv: Service | undefined = _.find(state.services, { name: srvName })
@@ -211,7 +211,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function advertiseTopic(channel: ClientChannelWithoutId) {
     if (!state.client) {
-      message.error('未识别到连接，请稍后再试')
+      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     const channelId = state.client.advertise(channel)
@@ -229,7 +229,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function unAdvertiseTopic(channelId: number) {
     if (!state.client) {
-      message.error('未识别到连接，请稍后再试')
+      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     // remove from advertised channels list
@@ -247,7 +247,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function listenMessage(callback: (...args: any) => void) {
     if (!state.client) {
-      message.error('未识别到连接，请稍后再试')
+      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     state.client.on('message', callback)
@@ -260,7 +260,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function stopListenMessage(callback: (...args: any) => void) {
     if (!state.client) {
-      message.error('未识别到连接，请稍后再试')
+      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     state.client.off('message', callback)

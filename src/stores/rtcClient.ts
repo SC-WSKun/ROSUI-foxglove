@@ -14,11 +14,11 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
     p2pSocket: null
   }
 
-  function initRtcClient(): Promise<P2PSocket> {
+  function initRtcClient(robotId: string): Promise<P2PSocket> {
     return new Promise((resolve, reject) => {
       // 与信令服务器进行连接
       state.socket = new WebSocket(
-        'ws://222.201.144.170:8020/robot_webrtc/robot_01/signaling'
+        `ws://222.201.144.170:8020/robot_webrtc/${robotId}/signaling`
       )
       state.socket.onopen = () => sendMsg('rtc_setup', '')
       state.socket.onmessage = (event) => {
@@ -50,6 +50,10 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
               state.p2pSocket = new P2PSocket(dataChannel)
               resolve(state.p2pSocket)
             }
+            dataChannel.onerror = (err) => {
+              console.error(err);
+              
+            }
             state.pc
               .createOffer()
               .then((desc: RTCSessionDescriptionInit) => {
@@ -77,6 +81,9 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
           default:
             break
         }
+      }
+      state.socket.onerror = (err) => {
+        console.log(err)
       }
     })
   }

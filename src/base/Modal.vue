@@ -43,6 +43,7 @@ import { reactive, ref } from 'vue'
 import type { ModalOptions, FormOptions } from '@/typings/component'
 import _ from 'lodash'
 import { message } from 'ant-design-vue'
+import { stringType } from 'ant-design-vue/es/_util/type'
 
 interface ModalState extends ModalOptions {
   open: boolean
@@ -88,7 +89,6 @@ const openModal = (modalOptions: ModalOptions) => {
     showFooter,
     showMessage,
     content
-    // closeModal
   } = modalOptions
   modalState.title = title
   modalState.type = type || 'normal'
@@ -100,7 +100,6 @@ const openModal = (modalOptions: ModalOptions) => {
   modalState.showFooter = showFooter === undefined ? true : showFooter
   modalState.showMessage = showMessage === undefined ? true : showMessage
   modalState.content = content
-  // modalState.closeModal = closeModal === undefined ? true : closeModal
   customComponent = component
   propsData = props
 
@@ -122,6 +121,7 @@ const openModal = (modalOptions: ModalOptions) => {
       modalState.open = false
     } catch (err) {
       console.error(err)
+      if (typeof err === 'string') message.error(err)
       return
     }
   }

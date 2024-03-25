@@ -2,7 +2,6 @@
   <div class="Header">
     <div class="Header-logo" @click="onClickLogo">
       <img src="/robot.png" />
-      <!-- <RobotOutlined :style="{fontSize: '40px'}"/> -->
       RosUI-Foxglove
     </div>
     <div class="Header-info">
@@ -30,7 +29,6 @@
       </a-dropdown>
     </div>
   </div>
-  <Modal ref="modalRef"></Modal>
 </template>
 
 <script setup lang="ts">
@@ -39,52 +37,104 @@ import {
   DownOutlined,
   RobotOutlined
 } from '@ant-design/icons-vue'
-import { Empty } from 'ant-design-vue'
+import { Empty, message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
-// import { useUserStore } from '@/stores/user'
-import { ref } from 'vue'
-// import ImportUsers from '@/components/importUsers.vue'
+import { useGlobalStore } from '@/stores/global'
+import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
+import { useRtcClientStore } from '@/stores/rtcClient'
+import type P2PSocket from '@/utils/p2psocket'
 
 const router = useRouter()
-// const userStore = useUserStore()
-const modalRef: any = ref(null)
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
+const globalStore = useGlobalStore()
+const foxgloveClientStore = useFoxgloveClientStore()
+const rtcClientStore = useRtcClientStore()
+
+let connectTimer: number | null = null
 
 const menus: any[] = [
-
+  {
+    key: 'connect',
+    text: '连接机器人'
+  },
+  {
+    key: 'disconnect',
+    text: '断开连接'
+  }
 ]
 
-const logout = () => {
-  modalRef.value.openModal({
-    type: 'normal',
-    title: '提示',
-    content: '确定退出吗?',
-    doneMsg: '退出成功',
-    callback: () => {
-      // userStore.logout()
-      router.replace('/login')
-    }
-  })
-}
-
+// 处理菜单点击事件
 const handleMenuClick = ({ key }: { key: string }) => {
   switch (key) {
-    case 'import':
-      importUser()
+    case 'connect':
+      handleConnect()
+      break
+    case 'disconnect':
+      handleDisconnect()
       break
     default:
       break
   }
 }
 
-const importUser = () => {
-  modalRef.value.openModal({
-    type: 'custom',
-    title: '导入用户',
-    showFooter: false,
-    showMessage: false
-    // component: ImportUsers
+// 处理连接操作
+const handleConnect = () => {
+  if (globalStore.state.connected) {
+    message.warning('已经连接机器人，无需重复连接')
+    return
+  }
+  globalStore.state.modalRef.openModal({
+    title: '连接机器人',
+    type: 'form',
+    width: 600,
+    formOptions: {
+      items: [
+        {
+          label: '机器人ID',
+          key: 'id',
+          type: 'input',
+          placeholder: '请输入机器人ID',
+          required: true
+        }
+      ]
+    },
+    doneMsg: '连接成功',
+    callback: async (record: any) => {
+      return new Promise(async (resolve, reject) => {
+        globalStore.setLoading(true, '连接中')
+        const start = new Date().getTime()
+        connectTimer = setInterval(() => {
+          const end = new Date().getTime()
+          if (end - start > 1000 * 5) {
+            clearInterval(connectTimer as number)
+            connectTimer = null
+            globalStore.setLoading(false)
+            rtcClientStore.closeRtcClient()
+            reject('连接超时，请确认ID是否正确')
+          }
+        })
+        const socket: P2PSocket = await rtcClientStore.initRtcClient(record.id)
+        clearInterval(connectTimer as number)
+        connectTimer = null
+        foxgloveClientStore.initClient(socket)
+        globalStore.setLoading(false)
+        globalStore.setConected(true)
+        resolve('连接成功')
+      })
+    }
   })
+}
+
+// 处理断开连接操作
+const handleDisconnect = () => {
+  if (!globalStore.state.connected) {
+    message.warning('未连接机器人，无需断开连接')
+    return
+  }
+  foxgloveClientStore.closeClient()
+  rtcClientStore.closeRtcClient()
+  globalStore.setConected(false)
+  message.success('断开连接成功')
 }
 
 const onClickLogo = () => {

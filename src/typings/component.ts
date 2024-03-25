@@ -85,5 +85,4 @@ export interface ModalOptions {
   showFooter?: boolean
   showMessage?: boolean
   content?: string
-  // closeModal?: boolean
 }

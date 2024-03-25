@@ -5,13 +5,15 @@ type GlobalState = {
   loading: boolean
   loadingTip: string
   modalRef: any
+  connected: boolean
 }
 
 export const useGlobalStore = defineStore('global', () => {
   const state = reactive<GlobalState>({
     loading: false,
     loadingTip: '加载中...',
-    modalRef: null
+    modalRef: null,
+    connected: false
   })
 
   function setLoading(loading: boolean, loadingTip?: string) {
@@ -23,5 +25,9 @@ export const useGlobalStore = defineStore('global', () => {
     state.modalRef = modalRef
   }
 
-  return { state, setLoading, setModalRef }
+  function setConected(connected: boolean) {
+    state.connected = connected
+  }
+
+  return { state, setLoading, setModalRef, setConected }
 })
