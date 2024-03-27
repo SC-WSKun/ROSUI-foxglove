@@ -83,6 +83,7 @@ export interface ModalOptions {
   doneMsg?: string
   width?: number | string
   showFooter?: boolean
-  showMessage?: boolean
+  showMsg?: boolean
   content?: string
+  onCancel?: () => any
 }

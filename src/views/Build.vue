@@ -7,54 +7,59 @@
     </div>
     <div class="config">
       <a-card
+        title="实时画面"
+        :bordered="false"
+        style="width: 100%; height: 100%"
+      >
+        <video id="video"></video>
+      </a-card>
+      <a-card
         title="操作栏"
         :bordered="false"
         style="width: 100%; height: 100%"
       >
-        <div class="build">
-          <!-- 建图前 -->
-          <div class="btn" v-if="state.curState === 0">
-            <a-button
-              @click="launchBuild"
-              type="primary"
-              :icon="h(CaretRightOutlined)"
-            >
-              开始建图
-            </a-button>
-          </div>
-          <!-- 建图中 -->
-          <div class="btn" v-if="state.curState === 1">
-            <a-button
-              @click="switchBuild"
-              type="primary"
-              :icon="h(PauseOutlined)"
-              danger
-            >
-              暂停建图
-            </a-button>
-            <div class="switch">
-              <a-switch
-                v-model:checked="state.navigating"
-                @change="switchNavigation"
-              ></a-switch
-              >导航模式
-            </div>
-          </div>
-          <!-- 建图后 -->
-          <div class="btn" v-if="state.curState === 2">
-            <a-button
-              @click="switchBuild"
-              type="primary"
-              :icon="h(CaretRightOutlined)"
-            >
-              继续建图
-            </a-button>
-            <a-button @click="saveMap" type="primary" :icon="h(SaveOutlined)">
-              保存地图
-            </a-button>
-          </div>
-          <JoyStick v-if="state.curState === 1"></JoyStick>
+        <!-- 建图前 -->
+        <div class="btn" v-if="state.curState === 0">
+          <a-button
+            @click="launchBuild"
+            type="primary"
+            :icon="h(CaretRightOutlined)"
+          >
+            开始建图
+          </a-button>
         </div>
+        <!-- 建图中 -->
+        <div class="btn" v-if="state.curState === 1">
+          <a-button
+            @click="switchBuild"
+            type="primary"
+            :icon="h(PauseOutlined)"
+            danger
+          >
+            暂停建图
+          </a-button>
+          <div class="switch">
+            <a-switch
+              v-model:checked="state.navigating"
+              @change="switchNavigation"
+            ></a-switch
+            >导航模式
+          </div>
+        </div>
+        <!-- 建图后 -->
+        <div class="btn" v-if="state.curState === 2">
+          <a-button
+            @click="switchBuild"
+            type="primary"
+            :icon="h(CaretRightOutlined)"
+          >
+            继续建图
+          </a-button>
+          <a-button @click="saveMap" type="primary" :icon="h(SaveOutlined)">
+            保存地图
+          </a-button>
+        </div>
+        <JoyStick v-if="state.curState === 1"></JoyStick>
       </a-card>
     </div>
   </div>
@@ -74,6 +79,7 @@ import type { MessageData } from '@foxglove/ws-protocol'
 import type { GridMap, serviceResponse } from '@/typings'
 import DrawManage from '@/utils/draw'
 import _ from 'lodash'
+import { useRtcClientStore } from '@/stores/rtcClient'
 
 interface State {
   mapSubId: number
@@ -85,6 +91,7 @@ interface State {
 
 const foxgloveClientStore = useFoxgloveClientStore()
 const globalStore = useGlobalStore()
+const rtcClientStore = useRtcClientStore()
 
 const STATE_MAP = {
   WAITING: 0,
@@ -141,13 +148,13 @@ const unSubscribeMapTopic = () => {
 
 // 启动建图模式
 const launchBuild = () => {
-  globalStore.state.modalRef.openModal({
+  globalStore.openModal({
     title: '开始建图',
     type: 'form',
     width: 800,
     confirmText: '启动',
     showCancel: true,
-    showMessage: false,
+    showMsg: false,
     formOptions: {
       items: [
         {
@@ -178,6 +185,12 @@ const launchBuild = () => {
           })
           state.drawManage.subscribeCarPosition()
           state.drawManage.subscribeScanPoints()
+          const video: HTMLVideoElement | null =
+            document.querySelector('#video')
+          if (video) {
+            video.srcObject = rtcClientStore.getStream()
+            video.autoplay = true
+          }
         })
         .catch((err) => {
           globalStore.setLoading(false)
@@ -221,7 +234,7 @@ const switchNavigation = () => {
 
 // 保存地图
 const saveMap = () => {
-  globalStore.state.modalRef.openModal({
+  globalStore.openModal({
     title: '保存地图',
     type: 'form',
     width: 800,
@@ -301,25 +314,27 @@ onBeforeUnmount(() => {
   }
 
   .config {
-    width: 25%;
+    width: 35%;
     height: 100%;
-    background: #fff;
     overflow: auto;
+    .flex(center, center, column);
+    gap: 15px;
 
-    .build {
-      margin-top: 20px;
-      .flex(space-between, center, column);
+    #video {
+      width: 100%;
+      height: 100%;
+    }
 
-      .btn {
-        width: 80%;
-        .flex(center, center);
-        gap: 10px;
-        .switch {
-          display: flex;
-          gap: 5px;
-        }
+    .btn {
+      width: 100%;
+      .flex(center, center);
+      gap: 10px;
+      .switch {
+        .flex;
+        gap: 5px;
       }
     }
+    // }
   }
 }
 </style>

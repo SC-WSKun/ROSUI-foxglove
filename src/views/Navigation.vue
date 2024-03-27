@@ -5,34 +5,31 @@
     </div>
     <div class="config">
       <a-card
+        title="实时画面"
+        :bordered="false"
+        style="width: 100%; height: 100%"
+      >
+        <video id="video"></video>
+      </a-card>
+      <a-card
         title="操作栏"
         :bordered="false"
         style="width: 100%; height: 100%"
       >
         <!-- 0. 等待用户获取地图列表 -->
         <div class="btn" v-if="state.curState === 0">
-          <a-button @click="listMaps" type="primary">获取地图列表</a-button>
+          <a-button @click="selectMap" type="primary">选择地图</a-button>
         </div>
-        <!-- 1. 选择地图 -->
-        <div class="select" v-if="state.curState === 1">
-          <div class="list">
-            <Table
-              :tableOptions="tableOptions"
-              :dataSource="state.maps"
-              :loading="false"
-            ></Table>
-          </div>
-        </div>
-        <!-- 2. 预览 -->
-        <div class="btn" v-if="state.curState === 2">
+        <!-- 1. 预览 -->
+        <div class="btn" v-if="state.curState === 1">
           <a-button @click="initPose">指定初始位姿</a-button>
         </div>
-        <!-- 3. 指定初始位姿 -->
-        <div class="btn" v-if="state.curState === 3">
+        <!-- 2. 指定初始位姿 -->
+        <div class="btn" v-if="state.curState === 2">
           <a-button type="primary" @click="finishAdding"> 完成 </a-button>
         </div>
-        <!-- 4. 导航 -->
-        <div class="btn" v-if="state.curState === 4">
+        <!-- 3. 导航 -->
+        <div class="btn" v-if="state.curState === 3">
           <JoyStick></JoyStick>
           <a-button
             @click="confirmConnect"
@@ -53,8 +50,8 @@
           >
           <a-button @click="closeNav" type="primary" danger>结束导航</a-button>
         </div>
-        <!-- 5. 暂停导航 -->
-        <div class="btn" v-if="state.curState === 5">
+        <!-- 4. 暂停导航 -->
+        <div class="btn" v-if="state.curState === 4">
           <a-button @click="subscribeMapTopic">恢复导航</a-button>
           <a-button @click="selectMap">重新选择地图</a-button>
         </div>
@@ -72,6 +69,7 @@ import type { TableOptions } from '@/typings/component'
 import type { MessageData } from '@foxglove/ws-protocol'
 import DrawManage from '@/utils/draw'
 import { message, notification } from 'ant-design-vue'
+import { useRtcClientStore } from '@/stores/rtcClient'
 
 interface State {
   maps: Map[]
@@ -82,10 +80,12 @@ interface State {
   curState: number
   navigating: boolean
   crossing: boolean
+  videoShow: boolean
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
 const globalStore = useGlobalStore()
+const rtcClientStore = useRtcClientStore()
 
 const state = reactive<State>({
   maps: [],
@@ -95,16 +95,16 @@ const state = reactive<State>({
   connecting: false, // 连接地图ing
   curState: 0, // 当前状态step
   navigating: false, // 导航ing
-  crossing: false // 跨图导航ing
+  crossing: false, // 跨图导航ing
+  videoShow: false
 })
 
 const STATE_MAP = {
   WAITINT: 0, // 等待获取地图
-  SELECTING: 1, // 选择地图
-  PREVIEWING: 2, // 预览地图
-  INITING: 3, // 初始化位姿
-  NAVIGATING: 4, // 导航
-  PAUSING: 5 // 暂停
+  PREVIEWING: 1, // 预览地图
+  INITING: 2, // 初始化位姿
+  NAVIGATING: 3, // 导航
+  PAUSING: 4 // 暂停
 }
 
 // 地图列表表格配置项
@@ -140,6 +140,8 @@ const tableOptions: TableOptions = {
             message.error('地图不连通，请重新选择')
             return
           }
+        } else if (!state.videoShow) {
+          showVideo()
         }
         globalStore.setLoading(true, '加载地图中')
         state.selectedMap = record
@@ -153,13 +155,11 @@ const tableOptions: TableOptions = {
             state.drawManage.drawGridMap(wrap, res.map, true)
             state.curState = STATE_MAP.PREVIEWING
             globalStore.setLoading(false)
-            if (state.connecting || state.crossing) {
-              state.drawManage.unSubscribeCarPosition()
-              state.drawManage.unSubscribeScanPoints()
-              unSubscribeMapTopic()
-              initPose()
-              globalStore.state.modalRef.closeModal()
-            }
+            state.drawManage.unSubscribeCarPosition()
+            state.drawManage.unSubscribeScanPoints()
+            unSubscribeMapTopic()
+            initPose()
+            globalStore.closeModal()
           })
           .catch((err) => {
             console.log(err)
@@ -174,18 +174,21 @@ const tableOptions: TableOptions = {
 
 // 获取地图列表
 const listMaps = () => {
-  globalStore.setLoading(true, '地图列表加载中')
-  // 获取地图列表
-  foxgloveClientStore
-    .callService('/tiered_nav_conn_graph/list_maps', {})
-    .then((res) => {
-      state.maps = res.maps
-      state.curState = STATE_MAP.SELECTING
-      globalStore.setLoading(false)
-    })
-    .catch((err) => {
-      globalStore.setLoading(false)
-    })
+  return new Promise((resolve, reject) => {
+    globalStore.setLoading(true, '正在获取最新地图列表')
+    // 获取地图列表
+    foxgloveClientStore
+      .callService('/tiered_nav_conn_graph/list_maps', {})
+      .then((res) => {
+        state.maps = res.maps
+        globalStore.setLoading(false)
+        resolve(res.maps)
+      })
+      .catch((err) => {
+        message.error('获取地图列表失败，请稍后再试')
+        globalStore.setLoading(false)
+      })
+  })
 }
 
 // 指定初始位姿
@@ -285,25 +288,37 @@ const mapMsgHandler = ({
 // 连接地图
 const connectMap = () => {
   state.connecting = true
-  globalStore.state.modalRef.openModal({
+  globalStore.openModal({
     title: '选择地图',
     type: 'table',
     tableOptions,
     dataSource: state.maps,
-    showMessage: false,
-    showFooter: false
+    showMsg: false,
+    showFooter: false,
+    onCancel: () => {
+      if (state.connecting) {
+        state.connecting = false
+      }
+    }
   })
 }
 
 // 选择地图
 const selectMap = () => {
-  state.curState = STATE_MAP.SELECTING
-  listMaps()
+  listMaps().then((res) => {
+    globalStore.openModal({
+      title: '选择地图',
+      type: 'table',
+      tableOptions,
+      dataSource: res,
+      showFooter: false
+    })
+  })
 }
 
 // 确认连接地图
 const confirmConnect = () => {
-  globalStore.state.modalRef.openModal({
+  globalStore.openModal({
     title: '提示',
     type: 'normal',
     content: '确定以当前位置作为连接点吗？',
@@ -331,7 +346,8 @@ const confirmConnect = () => {
 // 跨图导航
 const crossNav = () => {
   state.crossing = true
-  globalStore.state.modalRef.openModal({
+  state.navigating = false
+  globalStore.openModal({
     title: '跨图导航',
     type: 'table',
     tableOptions,
@@ -362,6 +378,15 @@ const closeNav = () => {
   state.drawManage.navRemoveListener()
   state.drawManage.pzAddListener()
   state.curState = STATE_MAP.PAUSING
+}
+
+// 展示实时画面
+const showVideo = () => {
+  const video: HTMLVideoElement | null = document.querySelector('#video')
+  if (video) {
+    video.srcObject = rtcClientStore.getStream()
+    video.autoplay = true
+  }
 }
 
 onMounted(() => {})
@@ -397,10 +422,17 @@ onBeforeUnmount(() => {
   }
 
   .config {
-    width: 25%;
+    width: 35%;
     height: 100%;
     background: #fff;
     overflow: auto;
+    .flex(center, center, column);
+    gap: 15px;
+
+    #video {
+      width: 100%;
+      height: 100%;
+    }
 
     .btn {
       width: 100%;

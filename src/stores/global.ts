@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { defineStore } from 'pinia'
+import type { ModalOptions } from '@/typings/component'
 
 type GlobalState = {
   loading: boolean
@@ -29,5 +30,25 @@ export const useGlobalStore = defineStore('global', () => {
     state.connected = connected
   }
 
-  return { state, setLoading, setModalRef, setConected }
+  function isConnected() {
+    return state.connected
+  }
+
+  function openModal(modalOptions: ModalOptions) {
+    state.modalRef.openModal(modalOptions)
+  }
+
+  function closeModal() {
+    state.modalRef.closeModal()
+  }
+
+  return {
+    state,
+    setLoading,
+    setModalRef,
+    setConected,
+    isConnected,
+    openModal,
+    closeModal
+  }
 })

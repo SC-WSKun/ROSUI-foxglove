@@ -5,13 +5,17 @@ interface RtcClientStoreState {
   pc: RTCPeerConnection | null
   socket: WebSocket | null
   p2pSocket: P2PSocket | null
+  streamListener: ((stream: MediaStream) => void) | null
+  stream: MediaStream | null
 }
 
 export const useRtcClientStore = defineStore('rtcClient', () => {
   const state: RtcClientStoreState = {
     pc: null,
     socket: null,
-    p2pSocket: null
+    p2pSocket: null,
+    streamListener: null,
+    stream: null
   }
 
   function initRtcClient(robotId: string): Promise<P2PSocket> {
@@ -40,7 +44,12 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
                 sendMsg('ice', JSON.stringify(event.candidate))
               }
             }
-            state.pc.ontrack = (event) => {}
+            state.pc.addTransceiver('video', { direction: 'recvonly' })
+            state.pc.ontrack = (event: RTCTrackEvent) => {
+              console.log('track', event)
+              state.stream = event.streams[0]
+              // if (state.streamListener) state.streamListener(event.streams[0])
+            }
             const dataChannel = state.pc.createDataChannel(
               'foxglove.websocket.v1'
             )
@@ -51,8 +60,7 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
               resolve(state.p2pSocket)
             }
             dataChannel.onerror = (err) => {
-              console.error(err);
-              
+              console.error(err)
             }
             state.pc
               .createOffer()
@@ -103,6 +111,18 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
     state.p2pSocket = null
   }
 
+  // function addStreamListener(listener: (stream: MediaStream) => void) {
+  //   state.streamListener = listener
+  // }
+
+  // function removeStreamListener() {
+  //   state.streamListener = null
+  // }
+
+  function getStream() {
+    return state.stream
+  }
+
   function sendMsg(msg_type: string, msg_body: string) {
     if (state.socket) {
       const msg = JSON.stringify({
@@ -115,6 +135,7 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
 
   return {
     initRtcClient,
-    closeRtcClient
+    closeRtcClient,
+    getStream
   }
 })

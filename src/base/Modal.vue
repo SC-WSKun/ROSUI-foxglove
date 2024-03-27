@@ -6,6 +6,7 @@
       :okText="modalState.confirmText || '确定'"
       :cancelText="'取消'"
       @ok="modalState.confirmCb"
+      @cancel="modalState.onCancel"
       destroyOnClose
       :width="modalState.width"
       :footer="modalState.showFooter ? undefined : null"
@@ -62,9 +63,9 @@ const modalState: ModalState = reactive({
   component: undefined,
   width: undefined,
   showFooter: true,
-  showMessage: true,
-  content: undefined
-  // closeModal: undefined
+  showMsg: true,
+  content: undefined,
+  onCancel: undefined
 })
 
 let propsData: any = undefined
@@ -87,8 +88,9 @@ const openModal = (modalOptions: ModalOptions) => {
     component,
     width,
     showFooter,
-    showMessage,
-    content
+    showMsg,
+    content,
+    onCancel
   } = modalOptions
   modalState.title = title
   modalState.type = type || 'normal'
@@ -98,8 +100,9 @@ const openModal = (modalOptions: ModalOptions) => {
   modalState.confirmText = confirmText
   modalState.width = width || 520
   modalState.showFooter = showFooter === undefined ? true : showFooter
-  modalState.showMessage = showMessage === undefined ? true : showMessage
+  modalState.showMsg = showMsg === undefined ? true : showMsg
   modalState.content = content
+  modalState.onCancel = onCancel || (() => {})
   customComponent = component
   propsData = props
 
@@ -117,7 +120,7 @@ const openModal = (modalOptions: ModalOptions) => {
     try {
       if (callback)
         await callback(formRef?.value?.formFields || customRef?.value?.data)
-      if (modalState.showMessage) message.success(doneMsg || '操作成功')
+      if (modalState.showMsg) message.success(doneMsg || '操作成功')
       modalState.open = false
     } catch (err) {
       console.error(err)

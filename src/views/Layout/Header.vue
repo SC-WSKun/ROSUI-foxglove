@@ -105,7 +105,7 @@ const handleConnect = () => {
         const start = new Date().getTime()
         connectTimer = setInterval(() => {
           const end = new Date().getTime()
-          if (end - start > 1000 * 5) {
+          if (end - start > 1000 * 30) {
             clearInterval(connectTimer as number)
             connectTimer = null
             globalStore.setLoading(false)
