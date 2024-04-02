@@ -79,14 +79,13 @@ export default class DrawManage {
   constructor() {
     this.foxgloveClientStore = useFoxgloveClientStore()
     // 需要定义为箭头函数，避免this指向错误
-    this.carPositionListener = ({
+    this.carPositionListener = _.throttle(({
       op,
       subscriptionId,
       timestamp,
       data
     }: MessageData) => {
       if (subscriptionId === this.tfSubId && !this.carRenderLock) {
-        this.carRenderLock = true
         const parseData = this.foxgloveClientStore.readMsgWithSubId(
           subscriptionId,
           data
@@ -97,9 +96,8 @@ export default class DrawManage {
           this.baseFootprintToOdom
         )
         this.updateCarPose()
-        this.carRenderLock = false
       }
-    }
+    }, 5)
     this.scanPointsListener = ({
       op,
       subscriptionId,
