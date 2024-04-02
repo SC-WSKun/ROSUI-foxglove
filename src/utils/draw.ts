@@ -181,9 +181,10 @@ export default class DrawManage {
     this.imgWrap.style.height = `${this.img.height}px`
     this.imgWrap.style.width = `${this.img.width}px`
 
-    const lastImg = document.querySelector('#map_img')
+    let lastImg = document.querySelector('#map_img')
     if (lastImg) {
       this.imgWrap.replaceChild(this.img, lastImg)
+      lastImg = null
     } else {
       this.imgWrap.appendChild(this.img)
     }
@@ -644,13 +645,15 @@ const mapToBaseFootprint = (
 const transformPointCloud = (pointCloud: any) => {
   const points = []
   let angle = pointCloud.angle_min
+  const min = pointCloud.range_min
+  const max = pointCloud.range_max
   for (let i = 0; i < pointCloud.ranges.length; i++) {
-    if (pointCloud.ranges[i] !== Infinity) {
-      const point = {
-        x: pointCloud.ranges[i] * Math.cos(angle),
-        y: pointCloud.ranges[i] * Math.sin(angle)
-      }
-      points.push(point)
+    const range = pointCloud.ranges[i]
+    if (range <= max && range >= min) {
+      points.push({
+        x: range * Math.cos(angle),
+        y: range * Math.sin(angle)
+      })
     }
     angle += pointCloud.angle_increment
   }
