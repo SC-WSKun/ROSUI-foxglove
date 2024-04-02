@@ -268,14 +268,19 @@ export default class DrawManage {
       return
     }
     // 获取真实世界坐标
+    console.log(this.mapInfo)
+
     const { x, y } = pixelToWorldCoordinate(
       event.offsetX,
       event.offsetY,
       this.scale,
       this.mapInfo.resolution,
       this.mapInfo.origin.position.x,
-      this.mapInfo.origin.position.y
+      this.mapInfo.origin.position.y,
+      this.mapInfo.height
     )
+    console.log(x, y, this.scale, this.mapInfo)
+
     this.navTranslation = {
       x,
       y,
@@ -315,7 +320,8 @@ export default class DrawManage {
       this.scale,
       this.mapInfo.resolution,
       this.mapInfo.origin.position.x,
-      this.mapInfo.origin.position.y
+      this.mapInfo.origin.position.y,
+      this.mapInfo.height
     )
     if (!this.navTranslation) {
       console.log('navTranslation is not found')
@@ -334,7 +340,7 @@ export default class DrawManage {
     // 隐藏箭头
     this.removeArrow()
     // this.imgWrap?.removeChild(this.arrow!)
-    console.log('rotation', this.navRotation)
+    // console.log('rotation', this.navRotation)
   }
 
   // 添加导航点交互监听
@@ -446,7 +452,9 @@ export default class DrawManage {
     }
     // 清除之前的红点
     this.pointsWrap.innerHTML = ''
-    points.forEach((point: { x: number; y: number }) => {
+    points.forEach((point: { x: number; y: number } | null) => {
+      // 过滤无用point，transform未获取全时point坐标会被转换为null
+      if (!point) return
       const pointEl = document.createElement('div')
       pointEl.className = 'point'
       const { x, y } = worldCoordinateToPixel(
@@ -494,35 +502,8 @@ export default class DrawManage {
       _.set(
         this,
         _.get(transform_map, transform.child_frame_id),
-        transform.transfrom
+        transform.transform
       )
-      // switch (transform.child_frame_id) {
-      //   case 'imu_link':
-      //     this.imuLinkToBaseLink = transform.transform
-      //     break
-      //   case 'laser_link':
-      //     this.laserLinkToBaseLink = transform.transform
-      //     break
-      //   case 'left_wheel':
-      //     this.leftWheelToBaseLink = transform.transform
-      //     break
-      //   case 'right_wheel':
-      //     this.rightWheelToBaseLink = transform.transform
-      //     break
-      //   case 'base_scan':
-      //     this.baseScanToBaseLink = transform.transform
-      //     break
-      //   case 'base_link':
-      //     this.baseLinkToBaseFootprint = transform.transform
-      //     break
-      //   case 'base_footprint':
-      //     this.baseFootprintToOdom = transform.transform
-      //     break
-      //   case 'odom':
-      //     this.odomToMap = transform.transform
-      //   default:
-      //     break
-      // }
     })
   }
 
@@ -531,23 +512,10 @@ export default class DrawManage {
     if (!this.laserFrame) return null
     let tmp: any = position
     const { transform_map } = dict
-    tmp = applyTransform(position, _.get(this, _.get(transform_map, this.laserFrame)))
-    // switch (this.laserFrame) {
-    //   case 'imu_link':
-    //     tmp = applyTransform(position, this.imuLinkToBaseLink)
-    //     break
-    //   case 'laser_link':
-    //     tmp = applyTransform(position, this.laserLinkToBaseLink)
-    //     break
-    //   case 'left_wheel':
-    //     tmp = applyTransform(position, this.leftWheelToBaseLink)
-    //     break
-    //   case 'right_wheel':
-    //     tmp = applyTransform(position, this.rightWheelToBaseLink)
-    //     break
-    //   default:
-    //     break
-    // }
+    tmp = applyTransform(
+      position,
+      _.get(this, _.get(transform_map, this.laserFrame))
+    )
     if (!tmp) return null
     tmp = applyTransform(tmp, this.baseLinkToBaseFootprint)
     tmp = applyTransform(tmp, this.baseFootprintToOdom)
@@ -571,11 +539,12 @@ const pixelToWorldCoordinate = (
   scale: number,
   resolution: number,
   originX: number,
-  originY: number
+  originY: number,
+  gridHeight: number
 ): { x: number; y: number } => {
   return {
     x: pixelOffsetX * scale * resolution + originX,
-    y: -(pixelOffsetY * scale * resolution + originY)
+    y: (gridHeight - pixelOffsetY * scale) * resolution + originY
   }
 }
 
