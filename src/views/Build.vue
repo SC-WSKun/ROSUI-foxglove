@@ -55,9 +55,17 @@
           >
             继续建图
           </a-button>
+
           <a-button @click="saveMap" type="primary" :icon="h(SaveOutlined)">
             保存地图
           </a-button>
+          <a-button
+            @click="closeBuild"
+            type="primary"
+            :icon="h(StopOutlined)"
+            danger
+            >结束建图</a-button
+          >
         </div>
         <JoyStick v-if="state.curState === 1"></JoyStick>
       </a-card>
@@ -70,7 +78,8 @@ import { reactive, h, onBeforeUnmount } from 'vue'
 import {
   CaretRightOutlined,
   PauseOutlined,
-  SaveOutlined
+  SaveOutlined,
+  StopOutlined
 } from '@ant-design/icons-vue'
 import { message, notification } from 'ant-design-vue'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
@@ -283,6 +292,33 @@ const saveMap = () => {
         })
     }
   })
+}
+
+// 结束建图
+const closeBuild = () => {
+  foxgloveClientStore
+    .callService('/tiered_nav_state_machine/switch_mode', {
+      mode: 0
+    })
+    .then(() => {
+      globalStore.openModal({
+        title: '结束建图',
+        type: 'normal',
+        content: '是否结束当前建图？',
+        callback: () => {
+          unSubscribeMapTopic()
+          state.drawManage.unSubscribeCarPosition()
+          state.drawManage.unSubscribeScanPoints()
+          state.drawManage.navRemoveListener()
+          state.curState = STATE_MAP.WAITING
+          state.drawManage.clear()
+          const video: HTMLVideoElement | null =
+            document.querySelector('#video')
+          if (video) video.srcObject = null
+          message.success('建图已结束')
+        }
+      })
+    })
 }
 
 onBeforeUnmount(() => {

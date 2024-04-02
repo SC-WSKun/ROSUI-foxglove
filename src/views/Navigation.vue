@@ -48,12 +48,30 @@
           <a-button @click="crossNav" type="primary" v-if="!state.connecting"
             >跨图导航</a-button
           >
-          <a-button @click="closeNav" type="primary" danger>结束导航</a-button>
+          <a-button
+            @click="pauseNav"
+            type="primary"
+            :icon="h(PauseOutlined)"
+            danger
+            >暂停导航</a-button
+          >
         </div>
         <!-- 4. 暂停导航 -->
         <div class="btn" v-if="state.curState === 4">
-          <a-button @click="subscribeMapTopic">恢复导航</a-button>
+          <a-button
+            @click="subscribeMapTopic"
+            type="primary"
+            :icon="h(CaretRightOutlined)"
+            >恢复导航</a-button
+          >
           <a-button @click="selectMap">重新选择地图</a-button>
+          <a-button
+            @click="closeNav"
+            :icon="h(StopOutlined)"
+            type="primary"
+            danger
+            >结束导航</a-button
+          >
         </div>
       </a-card>
     </div>
@@ -62,8 +80,14 @@
 
 <script setup lang="ts">
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
+import {
+  CaretRightOutlined,
+  PauseOutlined,
+  SaveOutlined,
+  StopOutlined
+} from '@ant-design/icons-vue'
 import { useGlobalStore } from '@/stores/global'
-import { onBeforeUnmount, onMounted, reactive } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, h } from 'vue'
 import { type GridMap, type Map } from '@/typings'
 import type { TableOptions } from '@/typings/component'
 import type { MessageData } from '@foxglove/ws-protocol'
@@ -100,7 +124,7 @@ const state = reactive<State>({
 })
 
 const STATE_MAP = {
-  WAITINT: 0, // 等待获取地图
+  WAITING: 0, // 等待获取地图
   PREVIEWING: 1, // 预览地图
   INITING: 2, // 初始化位姿
   NAVIGATING: 3, // 导航
@@ -372,12 +396,41 @@ const switchNavigation = () => {
   }
 }
 
-// 结束导航
-const closeNav = () => {
+// 暂停导航
+const pauseNav = () => {
   state.navigating = false
   state.drawManage.navRemoveListener()
   state.drawManage.pzAddListener()
   state.curState = STATE_MAP.PAUSING
+}
+
+// 结束导航
+const closeNav = () => {
+  foxgloveClientStore
+    .callService('/tiered_nav_state_machine/switch_mode', {
+      mode: 0
+    })
+    .then(() => {
+      globalStore.openModal({
+        title: '结束建图',
+        type: 'normal',
+        content: '是否结束当前建图？',
+        callback: () => {
+          unSubscribeMapTopic()
+          state.drawManage.unSubscribeCarPosition()
+          state.drawManage.navRemoveListener()
+          state.drawManage.pzRemoveListener()
+          state.drawManage.unSubscribeScanPoints()
+          state.drawManage.unAdvertiseNavTopic()
+          state.curState = STATE_MAP.WAITING
+          state.drawManage.clear()
+          const video: HTMLVideoElement | null =
+            document.querySelector('#video')
+          if (video) video.srcObject = null
+          message.success('导航已结束')
+        }
+      })
+    })
 }
 
 // 展示实时画面

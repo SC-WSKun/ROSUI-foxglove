@@ -49,6 +49,8 @@ export default class DrawManage {
     y: number
     yaw: number
   } | null = null
+  carRenderLock: boolean = false
+
   /**   Transform Tree
    *                             map
    *                              |
@@ -83,7 +85,8 @@ export default class DrawManage {
       timestamp,
       data
     }: MessageData) => {
-      if (subscriptionId === this.tfSubId) {
+      if (subscriptionId === this.tfSubId && !this.carRenderLock) {
+        this.carRenderLock = true
         const parseData = this.foxgloveClientStore.readMsgWithSubId(
           subscriptionId,
           data
@@ -94,6 +97,7 @@ export default class DrawManage {
           this.baseFootprintToOdom
         )
         this.updateCarPose()
+        this.carRenderLock = false
       }
     }
     this.scanPointsListener = ({
@@ -385,7 +389,7 @@ export default class DrawManage {
 
   // 清除图中残留箭头
   removeArrow() {
-    if (this.arrow) this.imgWrap?.removeChild(this.arrow)
+    if (this.arrow) this.imgWrap && this.imgWrap.removeChild(this.arrow)
   }
 
   // 监听小车位置信息
@@ -401,7 +405,8 @@ export default class DrawManage {
     this.foxgloveClientStore.stopListenMessage(this.carPositionListener)
     this.foxgloveClientStore.unSubscribeTopic(this.tfSubId)
     // 清除小车
-    if (this.car) this.imgWrap?.removeChild(this.car as HTMLElement)
+    if (this.car)
+      this.imgWrap && this.imgWrap.removeChild(this.car as HTMLElement)
   }
 
   // 监听扫描红点
@@ -530,6 +535,12 @@ export default class DrawManage {
     return points.map((point) => {
       return this.getPositionWithFrame(point)
     })
+  }
+
+  // 清空画布
+  clear() {
+    this.imgWrap?.remove()
+    this.imgWrap = null
   }
 }
 
