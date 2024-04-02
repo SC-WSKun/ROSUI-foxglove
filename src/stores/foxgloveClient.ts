@@ -59,6 +59,8 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
       console.log('current', state.channels)
     })
     state.client.on('advertiseServices', (services: Service[]) => {
+      console.log('services', services)
+
       state.services.push(...services)
     })
     state.client.on('open', () => {
@@ -171,6 +173,8 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
       return Promise.reject('Client not initialized!')
     }
     const srv: Service | undefined = _.find(state.services, { name: srvName })
+    console.log(state.services);
+    
     if (!srv) {
       message.error('未找到相关服务，请稍后再试')
       return Promise.reject('Service not found!')

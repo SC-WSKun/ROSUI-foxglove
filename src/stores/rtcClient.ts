@@ -46,7 +46,6 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
             }
             state.pc.addTransceiver('video', { direction: 'recvonly' })
             state.pc.ontrack = (event: RTCTrackEvent) => {
-              console.log('track', event)
               state.stream = event.streams[0]
               // if (state.streamListener) state.streamListener(event.streams[0])
             }
@@ -110,14 +109,6 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
     state.pc = null
     state.p2pSocket = null
   }
-
-  // function addStreamListener(listener: (stream: MediaStream) => void) {
-  //   state.streamListener = listener
-  // }
-
-  // function removeStreamListener() {
-  //   state.streamListener = null
-  // }
 
   function getStream() {
     return state.stream

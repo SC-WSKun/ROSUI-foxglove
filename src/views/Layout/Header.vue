@@ -94,7 +94,8 @@ const handleConnect = () => {
           key: 'id',
           type: 'input',
           placeholder: '请输入机器人ID',
-          required: true
+          required: true,
+          defaultValue: () => 'robot_02'
         }
       ]
     },

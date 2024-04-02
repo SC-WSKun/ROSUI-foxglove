@@ -11,6 +11,7 @@ import arrowImage from '@/assets/arrow.png'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import type { MessageData } from '@foxglove/ws-protocol'
 import _ from 'lodash'
+import dict from '@/dict'
 
 export default class DrawManage {
   panzoomIns: PanzoomObject | null = null
@@ -48,11 +49,30 @@ export default class DrawManage {
     y: number
     yaw: number
   } | null = null
-  mapToOdom: Transform | null = null
-  odomToBaseFootprint: Transform | null = null
-  baseScanToBaseLink: Transform | null = null
+  /**   Transform Tree
+   *                             map
+   *                              |
+   *                             odom
+   *                              |
+   *                        base_footprint
+   *                              |
+   *                           base_link
+   *                              |
+   *    ———————————————————————————————————————————————————————
+   *    |           |             |             |             |
+   * imu_link   laser_link    left_wheel    right_wheel   base_scan
+   */
+  odomToMap: Transform | null = null
+  baseFootprintToOdom: Transform | null = null
   baseLinkToBaseFootprint: Transform | null = null
+  baseScanToBaseLink: Transform | null = null
+  imuLinkToBaseLink: Transform | null = null
+  laserLinkToBaseLink: Transform | null = null
+  leftWheelToBaseLink: Transform | null = null
+  rightWheelToBaseLink: Transform | null = null
+
   navDisabled: boolean = false
+  laserFrame: string | null = null
 
   constructor() {
     this.foxgloveClientStore = useFoxgloveClientStore()
@@ -68,33 +88,12 @@ export default class DrawManage {
           subscriptionId,
           data
         )
-        if (
-          parseData.transforms.find(
-            (transform: any) =>
-              (transform.child_frame_id === 'base_footprint' &&
-                transform.header.frame_id === 'odom') ||
-              (transform.child_frame_id === 'odom' &&
-                transform.header.frame_id === 'map')
-          )
-        ) {
-          this.odomToBaseFootprint =
-            parseData.transforms.find(
-              (transform: any) =>
-                transform.child_frame_id === 'base_footprint' &&
-                transform.header.frame_id === 'odom'
-            )?.transform || this.odomToBaseFootprint
-          this.mapToOdom =
-            parseData.transforms.find(
-              (transform: any) =>
-                transform.child_frame_id === 'odom' &&
-                transform.header.frame_id === 'map'
-            )?.transform || this.mapToOdom
-          this.carPose = mapToBaseFootprint(
-            this.mapToOdom,
-            this.odomToBaseFootprint
-          )
-          this.updateCarPose()
-        }
+        this.updateTransform(parseData.transforms)
+        this.carPose = mapToBaseFootprint(
+          this.odomToMap,
+          this.baseFootprintToOdom
+        )
+        this.updateCarPose()
       }
     }
     this.scanPointsListener = ({
@@ -109,16 +108,7 @@ export default class DrawManage {
           data
         )
         console.log('tfStatic', parseData)
-        this.baseScanToBaseLink = parseData.transforms.find(
-          (transform: any) =>
-            transform.child_frame_id === 'base_scan' &&
-            transform.header.frame_id === 'base_link'
-        ).transform
-        this.baseLinkToBaseFootprint = parseData.transforms.find(
-          (transform: any) =>
-            transform.child_frame_id === 'base_link' &&
-            transform.header.frame_id === 'base_footprint'
-        ).transform
+        this.updateTransform(parseData.transforms)
       } else if (subscriptionId === this.scanSubId) {
         const time = new Date().getTime()
         if (time - this.scanPointsTime < 1000) return
@@ -127,22 +117,9 @@ export default class DrawManage {
           subscriptionId,
           data
         )
-        if (
-          !this.baseScanToBaseLink ||
-          !this.baseLinkToBaseFootprint ||
-          !this.odomToBaseFootprint ||
-          !this.mapToOdom
-        )
-          return
+        this.laserFrame = parseData.header.frame_id
         let points = transformPointCloud(parseData)
-        points = calPointPosition(
-          points,
-          this.baseScanToBaseLink,
-          this.baseLinkToBaseFootprint,
-          this.odomToBaseFootprint,
-          this.mapToOdom
-        )
-        this.updateScanPoints(points)
+        this.updateScanPoints(this.calPointPosition(points))
       }
     }
   }
@@ -422,9 +399,9 @@ export default class DrawManage {
 
   // 监听扫描红点
   subscribeScanPoints() {
-    this.foxgloveClientStore
-      .subscribeTopic('/scan')
-      .then((res: number) => (this.scanSubId = res))
+    this.foxgloveClientStore.subscribeTopic('/scan').then((res: number) => {
+      this.scanSubId = res
+    })
     this.foxgloveClientStore
       .subscribeTopic('/tf_static')
       .then((res: number) => (this.tfStaticSubId = res))
@@ -460,8 +437,8 @@ export default class DrawManage {
   }
 
   // 在地图上更新扫描红点
-  updateScanPoints(points: { x: number; y: number }[]) {
-    if (!this.imgWrap || !this.mapInfo) return
+  updateScanPoints(points: { x: number; y: number }[] | null) {
+    if (!this.imgWrap || !this.mapInfo || !points) return
     if (!this.pointsWrap) {
       this.pointsWrap = document.createElement('div')
       this.pointsWrap.className = 'points-wrap'
@@ -501,6 +478,88 @@ export default class DrawManage {
         position: this.navTranslation,
         orientation: this.navRotation
       }
+    })
+  }
+
+  // 更新transform
+  updateTransform(
+    transforms: {
+      transform: Transform
+      child_frame_id: string
+      [key: string]: any
+    }[]
+  ) {
+    transforms.forEach((transform) => {
+      const { transform_map } = dict
+      _.set(
+        this,
+        _.get(transform_map, transform.child_frame_id),
+        transform.transfrom
+      )
+      // switch (transform.child_frame_id) {
+      //   case 'imu_link':
+      //     this.imuLinkToBaseLink = transform.transform
+      //     break
+      //   case 'laser_link':
+      //     this.laserLinkToBaseLink = transform.transform
+      //     break
+      //   case 'left_wheel':
+      //     this.leftWheelToBaseLink = transform.transform
+      //     break
+      //   case 'right_wheel':
+      //     this.rightWheelToBaseLink = transform.transform
+      //     break
+      //   case 'base_scan':
+      //     this.baseScanToBaseLink = transform.transform
+      //     break
+      //   case 'base_link':
+      //     this.baseLinkToBaseFootprint = transform.transform
+      //     break
+      //   case 'base_footprint':
+      //     this.baseFootprintToOdom = transform.transform
+      //     break
+      //   case 'odom':
+      //     this.odomToMap = transform.transform
+      //   default:
+      //     break
+      // }
+    })
+  }
+
+  // 根据frame_id转换坐标
+  getPositionWithFrame(position: { x: number; y: number }) {
+    if (!this.laserFrame) return null
+    let tmp: any = position
+    const { transform_map } = dict
+    tmp = applyTransform(position, _.get(this, _.get(transform_map, this.laserFrame)))
+    // switch (this.laserFrame) {
+    //   case 'imu_link':
+    //     tmp = applyTransform(position, this.imuLinkToBaseLink)
+    //     break
+    //   case 'laser_link':
+    //     tmp = applyTransform(position, this.laserLinkToBaseLink)
+    //     break
+    //   case 'left_wheel':
+    //     tmp = applyTransform(position, this.leftWheelToBaseLink)
+    //     break
+    //   case 'right_wheel':
+    //     tmp = applyTransform(position, this.rightWheelToBaseLink)
+    //     break
+    //   default:
+    //     break
+    // }
+    if (!tmp) return null
+    tmp = applyTransform(tmp, this.baseLinkToBaseFootprint)
+    tmp = applyTransform(tmp, this.baseFootprintToOdom)
+    tmp = applyTransform(tmp, this.odomToMap)
+    return tmp
+  }
+
+  // 计算点云数据坐标
+  calPointPosition(points: { x: number; y: number }[]) {
+    if (!this.laserFrame) return null
+    return points.map((point) => {
+      return this.getPositionWithFrame(point)
     })
   }
 }
@@ -563,45 +622,45 @@ const coordinatesToQuaternion = (
 // 计算机器人相对于map的位置
 // map -> odom -> base_footprint
 const mapToBaseFootprint = (
-  mapToOdom: Transform | null,
-  odomToBaseFootprint: Transform | null
+  odomToMap: Transform | null,
+  baseFootprintToOdom: Transform | null
 ) => {
-  if (!mapToOdom || !odomToBaseFootprint) {
+  if (!odomToMap || !baseFootprintToOdom) {
     return null
   }
   // 计算map到odom的偏航角
   const mapToOdomYaw = Math.atan2(
     2.0 *
-      (mapToOdom.rotation.x * mapToOdom.rotation.y +
-        mapToOdom.rotation.z * mapToOdom.rotation.w),
+      (odomToMap.rotation.x * odomToMap.rotation.y +
+        odomToMap.rotation.z * odomToMap.rotation.w),
     1.0 -
       2.0 *
-        (mapToOdom.rotation.y * mapToOdom.rotation.y +
-          mapToOdom.rotation.z * mapToOdom.rotation.z)
+        (odomToMap.rotation.y * odomToMap.rotation.y +
+          odomToMap.rotation.z * odomToMap.rotation.z)
   )
   // 计算odom到base_footprint的偏航角
   const odomToBaseYaw = Math.atan2(
     2.0 *
-      (odomToBaseFootprint.rotation.x * odomToBaseFootprint.rotation.y +
-        odomToBaseFootprint.rotation.z * odomToBaseFootprint.rotation.w),
+      (baseFootprintToOdom.rotation.x * baseFootprintToOdom.rotation.y +
+        baseFootprintToOdom.rotation.z * baseFootprintToOdom.rotation.w),
     1.0 -
       2.0 *
-        (odomToBaseFootprint.rotation.y * odomToBaseFootprint.rotation.y +
-          odomToBaseFootprint.rotation.z * odomToBaseFootprint.rotation.z)
+        (baseFootprintToOdom.rotation.y * baseFootprintToOdom.rotation.y +
+          baseFootprintToOdom.rotation.z * baseFootprintToOdom.rotation.z)
   )
   // 计算map到odom的旋转矩阵
   const cosMapToOdom = Math.cos(mapToOdomYaw)
   const sinMapToOdom = Math.sin(mapToOdomYaw)
   // 将odomToBaseFootprint的平移向量通过mapToOdom的旋转进行旋转
   const rotatedOdomToBaseX =
-    odomToBaseFootprint.translation.x * cosMapToOdom -
-    odomToBaseFootprint.translation.y * sinMapToOdom
+    baseFootprintToOdom.translation.x * cosMapToOdom -
+    baseFootprintToOdom.translation.y * sinMapToOdom
   const rotatedOdomToBaseY =
-    odomToBaseFootprint.translation.x * sinMapToOdom +
-    odomToBaseFootprint.translation.y * cosMapToOdom
+    baseFootprintToOdom.translation.x * sinMapToOdom +
+    baseFootprintToOdom.translation.y * cosMapToOdom
   // 将旋转后的平移向量加到mapToOdom的平移向量上
-  const finalTranslationX = mapToOdom.translation.x + rotatedOdomToBaseX
-  const finalTranslationY = mapToOdom.translation.y + rotatedOdomToBaseY
+  const finalTranslationX = odomToMap.translation.x + rotatedOdomToBaseX
+  const finalTranslationY = odomToMap.translation.y + rotatedOdomToBaseY
   // 对于旋转，直接将两个偏航角相加
   const finalYaw = (mapToOdomYaw + odomToBaseYaw) * (180 / Math.PI)
 
@@ -631,36 +690,34 @@ const transformPointCloud = (pointCloud: any) => {
 
 // 点云应用坐标系转换
 const applyTransform = (
-  points: { x: number; y: number }[],
-  transform: Transform
+  points: { x: number; y: number }[] | { x: number; y: number },
+  transform: Transform | null
 ) => {
+  if (!transform || !points) return null
   const { rotation, translation } = transform
-  return points.map((point) => {
+  if (points instanceof Array) {
+    return points.map((point) => {
+      const yaw = Math.atan2(
+        2.0 * (rotation.w * rotation.z + rotation.x * rotation.y),
+        1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z)
+      )
+      const rotatedX = Math.cos(yaw) * point.x - Math.sin(yaw) * point.y
+      const rotatedY = Math.sin(yaw) * point.x + Math.cos(yaw) * point.y
+      return {
+        x: rotatedX + translation.x,
+        y: rotatedY + translation.y
+      }
+    })
+  } else {
     const yaw = Math.atan2(
       2.0 * (rotation.w * rotation.z + rotation.x * rotation.y),
       1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z)
     )
-    const rotatedX = Math.cos(yaw) * point.x - Math.sin(yaw) * point.y
-    const rotatedY = Math.sin(yaw) * point.x + Math.cos(yaw) * point.y
+    const rotatedX = Math.cos(yaw) * points.x - Math.sin(yaw) * points.y
+    const rotatedY = Math.sin(yaw) * points.x + Math.cos(yaw) * points.y
     return {
       x: rotatedX + translation.x,
       y: rotatedY + translation.y
     }
-  })
-}
-
-// 计算扫描红点相对于map的位置
-// base_scae -> base_link -> base_footprint => odom -> map
-const calPointPosition = (
-  points: { x: number; y: number }[],
-  baseScanToBaseLink: Transform,
-  baseLinkToBaseFootprint: Transform,
-  baseFootprintToOdom: Transform,
-  odomToMap: Transform
-) => {
-  points = applyTransform(points, baseScanToBaseLink)
-  points = applyTransform(points, baseLinkToBaseFootprint)
-  points = applyTransform(points, baseFootprintToOdom)
-  points = applyTransform(points, odomToMap)
-  return points
+  }
 }
