@@ -12,6 +12,7 @@ import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import type { MessageData } from '@foxglove/ws-protocol'
 import _ from 'lodash'
 import dict from '@/dict'
+import { useGlobalStore } from '@/stores/global'
 
 export default class DrawManage {
   panzoomIns: PanzoomObject | null = null
@@ -64,40 +65,42 @@ export default class DrawManage {
    *    |           |             |             |             |
    * imu_link   laser_link    left_wheel    right_wheel   base_scan
    */
-  odomToMap: Transform | null = null
-  baseFootprintToOdom: Transform | null = null
-  baseLinkToBaseFootprint: Transform | null = null
-  baseScanToBaseLink: Transform | null = null
-  imuLinkToBaseLink: Transform | null = null
-  laserLinkToBaseLink: Transform | null = null
-  leftWheelToBaseLink: Transform | null = null
-  rightWheelToBaseLink: Transform | null = null
+  // odomToMap: Transform | null = null
+  // baseFootprintToOdom: Transform | null = null
+  // baseLinkToBaseFootprint: Transform | null = null
+  // baseScanToBaseLink: Transform | null = null
+  // imuLinkToBaseLink: Transform | null = null
+  // laserLinkToBaseLink: Transform | null = null
+  // leftWheelToBaseLink: Transform | null = null
+  // rightWheelToBaseLink: Transform | null = null
 
   navDisabled: boolean = false
   laserFrame: string | null = null
 
+  globalStore: any = null
+
   constructor() {
     this.foxgloveClientStore = useFoxgloveClientStore()
+    this.globalStore = useGlobalStore()
     // 需要定义为箭头函数，避免this指向错误
-    this.carPositionListener = _.throttle(({
-      op,
-      subscriptionId,
-      timestamp,
-      data
-    }: MessageData) => {
-      if (subscriptionId === this.tfSubId && !this.carRenderLock) {
-        const parseData = this.foxgloveClientStore.readMsgWithSubId(
-          subscriptionId,
-          data
-        )
-        this.updateTransform(parseData.transforms)
-        this.carPose = mapToBaseFootprint(
-          this.odomToMap,
-          this.baseFootprintToOdom
-        )
-        this.updateCarPose()
-      }
-    }, 5)
+    this.carPositionListener = _.throttle(
+      ({ op, subscriptionId, timestamp, data }: MessageData) => {
+        if (subscriptionId === this.tfSubId && !this.carRenderLock) {
+          const parseData = this.foxgloveClientStore.readMsgWithSubId(
+            subscriptionId,
+            data
+          )
+          this.updateTransform(parseData.transforms)
+          this.globalStore.updateTransform(parseData.transforms)
+          this.carPose = mapToBaseFootprint(
+            this.globalStore.getTransform('odomToMap'),
+            this.globalStore.getTransform('baseFootprintToOdom')
+          )
+          this.updateCarPose()
+        }
+      },
+      5
+    )
     this.scanPointsListener = ({
       op,
       subscriptionId,
@@ -111,6 +114,7 @@ export default class DrawManage {
         )
         console.log('tfStatic', parseData)
         this.updateTransform(parseData.transforms)
+        this.globalStore.updateTransform(parseData.transforms)
       } else if (subscriptionId === this.scanSubId) {
         const time = new Date().getTime()
         if (time - this.scanPointsTime < 1000) return
@@ -516,14 +520,16 @@ export default class DrawManage {
     if (!this.laserFrame) return null
     let tmp: any = position
     const { transform_map } = dict
+
     tmp = applyTransform(
       position,
-      _.get(this, _.get(transform_map, this.laserFrame))
+      // _.get(this, _.get(transform_map, this.laserFrame))
+      this.globalStore.getTransform(_.get(transform_map, this.laserFrame))
     )
     if (!tmp) return null
-    tmp = applyTransform(tmp, this.baseLinkToBaseFootprint)
-    tmp = applyTransform(tmp, this.baseFootprintToOdom)
-    tmp = applyTransform(tmp, this.odomToMap)
+    tmp = applyTransform(tmp, this.globalStore.getTransform('baseLinkToBaseFootprint'))
+    tmp = applyTransform(tmp, this.globalStore.getTransform('baseFootprintToOdom'))
+    tmp = applyTransform(tmp, this.globalStore.getTransform('odomToMap'))
     return tmp
   }
 

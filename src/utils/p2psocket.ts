@@ -38,10 +38,14 @@ export default class P2PSocket implements IWebSocket {
     })
 
     this.dataChannel.addEventListener('error', (error: Event) => {
+      console.log('datachannel', error)
+
       this.onerror(error)
     })
 
     this.dataChannel.addEventListener('close', (event: Event) => {
+      console.log('datachannel', event)
+
       this.onclose(event)
     })
   }

@@ -9,7 +9,7 @@
         :bordered="false"
         style="width: 100%; height: 100%"
       >
-        <video id="video"></video>
+        <LiveVideo />
       </a-card>
       <a-card
         title="操作栏"
@@ -27,6 +27,7 @@
         <!-- 2. 指定初始位姿 -->
         <div class="btn" v-if="state.curState === 2">
           <a-button type="primary" @click="finishAdding"> 完成 </a-button>
+          <a-button type="primary" @click="selectMap">重新选择</a-button>
         </div>
         <!-- 3. 导航 -->
         <div class="btn" v-if="state.curState === 3">
@@ -87,7 +88,7 @@ import {
   StopOutlined
 } from '@ant-design/icons-vue'
 import { useGlobalStore } from '@/stores/global'
-import { onBeforeUnmount, onMounted, reactive, h } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, h, watch } from 'vue'
 import { type GridMap, type Map } from '@/typings'
 import type { TableOptions } from '@/typings/component'
 import type { MessageData } from '@foxglove/ws-protocol'
@@ -104,7 +105,6 @@ interface State {
   curState: number
   navigating: boolean
   crossing: boolean
-  videoShow: boolean
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
@@ -120,7 +120,6 @@ const state = reactive<State>({
   curState: 0, // 当前状态step
   navigating: false, // 导航ing
   crossing: false, // 跨图导航ing
-  videoShow: false
 })
 
 const STATE_MAP = {
@@ -130,6 +129,24 @@ const STATE_MAP = {
   NAVIGATING: 3, // 导航
   PAUSING: 4 // 暂停
 }
+
+watch(
+  () => globalStore.state.connected,
+  (newVal: boolean) => {
+    // 异常中断兜底逻辑
+    if (!newVal) {
+      state.curState = STATE_MAP.WAITING
+      unSubscribeMapTopic()
+      state.drawManage?.unSubscribeCarPosition()
+      state.drawManage?.unSubscribeScanPoints()
+      state.drawManage?.pzRemoveListener()
+      state.drawManage?.navRemoveListener()
+      state.drawManage?.unAdvertiseNavTopic()
+      state.drawManage?.clear()
+      state.selectedMap = null
+    }
+  }
+)
 
 // 地图列表表格配置项
 const tableOptions: TableOptions = {
@@ -164,8 +181,6 @@ const tableOptions: TableOptions = {
             message.error('地图不连通，请重新选择')
             return
           }
-        } else if (!state.videoShow) {
-          showVideo()
         }
         globalStore.setLoading(true, '加载地图中')
         state.selectedMap = record
@@ -246,6 +261,8 @@ const finishAdding = async () => {
   if (state.crossing) {
     state.drawManage.publishNavigation(state.selectedMap?.map_name)
     subscribeMapTopic()
+    state.crossing = false
+    state.drawManage.navDisabled = false
   } else {
     // 指定初始位姿或连接点
     foxgloveClientStore
@@ -406,16 +423,18 @@ const pauseNav = () => {
 
 // 结束导航
 const closeNav = () => {
-  foxgloveClientStore
-    .callService('/tiered_nav_state_machine/switch_mode', {
-      mode: 0
-    })
-    .then(() => {
-      globalStore.openModal({
-        title: '结束建图',
-        type: 'normal',
-        content: '是否结束当前建图？',
-        callback: () => {
+  globalStore.openModal({
+    title: '结束导航',
+    type: 'normal',
+    content: '是否结束当前导航？',
+    showMsg: false,
+    callback: () => {
+      globalStore.setLoading(true, '请稍等')
+      foxgloveClientStore
+        .callService('/tiered_nav_state_machine/switch_mode', {
+          mode: 0
+        })
+        .then(() => {
           unSubscribeMapTopic()
           state.drawManage.unSubscribeCarPosition()
           state.drawManage.navRemoveListener()
@@ -423,26 +442,14 @@ const closeNav = () => {
           state.drawManage.unSubscribeScanPoints()
           state.drawManage.unAdvertiseNavTopic()
           state.curState = STATE_MAP.WAITING
+          state.selectedMap = null
           state.drawManage.clear()
-          const video: HTMLVideoElement | null =
-            document.querySelector('#video')
-          if (video) video.srcObject = null
-          message.success('导航已结束')
-        }
-      })
-    })
+          globalStore.setLoading(false)
+          message.warning('导航已结束')
+        })
+    }
+  })
 }
-
-// 展示实时画面
-const showVideo = () => {
-  const video: HTMLVideoElement | null = document.querySelector('#video')
-  if (video) {
-    video.srcObject = rtcClientStore.getStream()
-    video.autoplay = true
-  }
-}
-
-onMounted(() => {})
 
 onBeforeUnmount(() => {
   state.drawManage?.pzRemoveListener()
@@ -481,11 +488,6 @@ onBeforeUnmount(() => {
     overflow: auto;
     .flex(center, center, column);
     gap: 15px;
-
-    #video {
-      width: 100%;
-      height: 100%;
-    }
 
     .btn {
       width: 100%;

@@ -119,7 +119,7 @@ const handleConnect = () => {
         connectTimer = null
         foxgloveClientStore.initClient(socket)
         globalStore.setLoading(false)
-        globalStore.setConected(true)
+        globalStore.setConnected(true)
         resolve('连接成功')
       })
     }
@@ -134,8 +134,7 @@ const handleDisconnect = () => {
   }
   foxgloveClientStore.closeClient()
   rtcClientStore.closeRtcClient()
-  globalStore.setConected(false)
-  message.success('断开连接成功')
+  globalStore.setConnected(false)
 }
 
 const onClickLogo = () => {

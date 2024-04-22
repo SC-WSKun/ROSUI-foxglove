@@ -27,6 +27,7 @@ import {
   ConfigProvider
 } from 'ant-design-vue'
 import JoyStick from '@/components/JoyStick.vue'
+import LiveVideo from '@/components/LiveVideo.vue'
 
 export default {
   install(app: App) {
@@ -58,6 +59,7 @@ export default {
     app.use(ConfigProvider)
 
     app.component('JoyStick', JoyStick)
+    app.component('LiveVideo', LiveVideo)
 
     const components = import.meta.glob(['@/base/*.vue', '@/icons/*.vue'])
     for (const [key, value] of Object.entries(components)) {

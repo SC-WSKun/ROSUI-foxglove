@@ -1,7 +1,10 @@
 <template>
   <div class="build">
     <div class="view" id="buildMap">
-      <div class="tips" v-if="state.curState === 0">
+      <div
+        class="tips"
+        v-if="state.curState === 0 || !globalStore.isConnected()"
+      >
         暂未建图，点击右侧开始建图
       </div>
     </div>
@@ -11,7 +14,7 @@
         :bordered="false"
         style="width: 100%; height: 100%"
       >
-        <video id="video"></video>
+        <LiveVideo />
       </a-card>
       <a-card
         title="操作栏"
@@ -74,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, h, onBeforeUnmount } from 'vue'
+import { reactive, h, onBeforeUnmount, watch } from 'vue'
 import {
   CaretRightOutlined,
   PauseOutlined,
@@ -116,6 +119,21 @@ const state = reactive<State>({
   navigating: false
 })
 
+watch(
+  () => globalStore.state.connected,
+  (newVal: boolean) => {
+    // 异常中断兜底逻辑
+    if (!newVal) {
+      state.curState = STATE_MAP.WAITING
+      unSubscribeMapTopic()
+      state.drawManage?.unSubscribeCarPosition()
+      state.drawManage?.unSubscribeScanPoints()
+      state.drawManage?.navRemoveListener()
+      state.drawManage?.clear()
+    }
+  }
+)
+
 // 地图消息监听回调
 const mapMsgHandler = ({
   op,
@@ -153,6 +171,7 @@ const subscribeMapTopic = () => {
 const unSubscribeMapTopic = () => {
   foxgloveClientStore.stopListenMessage(mapMsgHandler)
   foxgloveClientStore.unSubscribeTopic(state.mapSubId)
+  state.mapSubId = -1
 }
 
 // 启动建图模式
@@ -194,12 +213,6 @@ const launchBuild = () => {
           })
           state.drawManage.subscribeCarPosition()
           state.drawManage.subscribeScanPoints()
-          const video: HTMLVideoElement | null =
-            document.querySelector('#video')
-          if (video) {
-            video.srcObject = rtcClientStore.getStream()
-            video.autoplay = true
-          }
         })
         .catch((err) => {
           globalStore.setLoading(false)
@@ -296,29 +309,29 @@ const saveMap = () => {
 
 // 结束建图
 const closeBuild = () => {
-  foxgloveClientStore
-    .callService('/tiered_nav_state_machine/switch_mode', {
-      mode: 0
-    })
-    .then(() => {
-      globalStore.openModal({
-        title: '结束建图',
-        type: 'normal',
-        content: '是否结束当前建图？',
-        callback: () => {
+  globalStore.openModal({
+    title: '结束建图',
+    type: 'normal',
+    content: '是否结束当前建图？',
+    showMsg: false,
+    callback: () => {
+      globalStore.setLoading(true, '请稍等')
+      foxgloveClientStore
+        .callService('/tiered_nav_state_machine/switch_mode', {
+          mode: 0
+        })
+        .then(() => {
           unSubscribeMapTopic()
           state.drawManage.unSubscribeCarPosition()
           state.drawManage.unSubscribeScanPoints()
           state.drawManage.navRemoveListener()
           state.curState = STATE_MAP.WAITING
           state.drawManage.clear()
-          const video: HTMLVideoElement | null =
-            document.querySelector('#video')
-          if (video) video.srcObject = null
-          message.success('建图已结束')
-        }
-      })
-    })
+          globalStore.setLoading(false)
+          message.warning('建图已结束')
+        })
+    }
+  })
 }
 
 onBeforeUnmount(() => {
@@ -355,11 +368,6 @@ onBeforeUnmount(() => {
     overflow: auto;
     .flex(center, center, column);
     gap: 15px;
-
-    #video {
-      width: 100%;
-      height: 100%;
-    }
 
     .btn {
       width: 100%;

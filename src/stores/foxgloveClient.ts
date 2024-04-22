@@ -11,6 +11,7 @@ import { MessageReader, MessageWriter } from '@foxglove/rosmsg2-serialization'
 import _ from 'lodash'
 import { parse as parseMessageDefinition } from '@foxglove/rosmsg'
 import type P2PSocket from '@/utils/p2psocket'
+import { useGlobalStore } from './global'
 
 interface Sub {
   subId: number
@@ -70,6 +71,8 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
       console.error(e)
     })
     state.client.on('close', () => {
+      const gloablStore = useGlobalStore()
+      gloablStore.setConnected(false)
       message.warning('Connection closed!')
     })
     state.client.on('serverInfo', (serverInfo: ServerInfo) => {
@@ -95,7 +98,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
       state.client.close()
       state.client = null
     }
-    message.warning('Connection closed!')
   }
 
   /**
@@ -126,7 +128,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function unSubscribeTopic(subId: number) {
     if (!state.client) {
-      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     // remove from subs list
@@ -233,7 +234,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function unAdvertiseTopic(channelId: number) {
     if (!state.client) {
-      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     // remove from advertised channels list
@@ -264,7 +264,6 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function stopListenMessage(callback: (...args: any) => void) {
     if (!state.client) {
-      message.error('未识别到连接，请在右上角【操作】中进行连接')
       return
     }
     state.client.off('message', callback)
