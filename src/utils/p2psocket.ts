@@ -32,17 +32,17 @@ export default class P2PSocket implements IWebSocket {
           this.jsonData += data
         }
       }
-      this.dataChannel.addEventListener('open', (event: Event) => {
-        this.onopen(event)
-      })
+    })
+    this.dataChannel.addEventListener('open', (event: Event) => {
+      this.onopen(event)
+    })
 
-      this.dataChannel.addEventListener('error', (error: Event) => {
-        this.onerror(error)
-      })
+    this.dataChannel.addEventListener('error', (error: Event) => {
+      this.onerror(error)
+    })
 
-      this.dataChannel.addEventListener('close', (event: Event) => {
-        this.onclose(event)
-      })
+    this.dataChannel.addEventListener('close', (event: Event) => {
+      this.onclose(event)
     })
   }
 
