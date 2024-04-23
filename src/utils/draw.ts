@@ -90,8 +90,8 @@ export default class DrawManage {
             subscriptionId,
             data
           )
-          this.updateTransform(parseData.transforms)
-          this.globalStore.updateTransform(parseData.transforms)
+          this.updateTransform(parseData?.transforms)
+          this.globalStore.updateTransform(parseData?.transforms)
           this.carPose = mapToBaseFootprint(
             this.globalStore.getTransform('odomToMap'),
             this.globalStore.getTransform('baseFootprintToOdom')
@@ -213,6 +213,11 @@ export default class DrawManage {
 
     // 自定义监听拖拽事件
     this.pzAddListener()
+  }
+
+  // 重置画布状态
+  resetPanzoom() {
+    this.panzoomIns?.reset()
   }
 
   // 拖拽&缩放地图的鼠标事件监听
@@ -407,8 +412,10 @@ export default class DrawManage {
     this.foxgloveClientStore.stopListenMessage(this.carPositionListener)
     this.foxgloveClientStore.unSubscribeTopic(this.tfSubId)
     // 清除小车
-    if (this.car)
+    if (this.car) {
       this.imgWrap && this.imgWrap.removeChild(this.car as HTMLElement)
+      this.car = null
+    }
   }
 
   // 监听扫描红点
@@ -456,8 +463,8 @@ export default class DrawManage {
     if (!this.pointsWrap) {
       this.pointsWrap = document.createElement('div')
       this.pointsWrap.className = 'points-wrap'
-      this.imgWrap.appendChild(this.pointsWrap)
     }
+    this.imgWrap.appendChild(this.pointsWrap)
     // 清除之前的红点
     this.pointsWrap.innerHTML = ''
     points.forEach((point: { x: number; y: number } | null) => {
@@ -527,8 +534,14 @@ export default class DrawManage {
       this.globalStore.getTransform(_.get(transform_map, this.laserFrame))
     )
     if (!tmp) return null
-    tmp = applyTransform(tmp, this.globalStore.getTransform('baseLinkToBaseFootprint'))
-    tmp = applyTransform(tmp, this.globalStore.getTransform('baseFootprintToOdom'))
+    tmp = applyTransform(
+      tmp,
+      this.globalStore.getTransform('baseLinkToBaseFootprint')
+    )
+    tmp = applyTransform(
+      tmp,
+      this.globalStore.getTransform('baseFootprintToOdom')
+    )
     tmp = applyTransform(tmp, this.globalStore.getTransform('odomToMap'))
     return tmp
   }

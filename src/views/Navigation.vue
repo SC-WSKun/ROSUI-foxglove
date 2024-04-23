@@ -1,7 +1,7 @@
 <template>
   <div class="navigation">
     <div class="view" id="navigationMap">
-      <div class="tips" v-if="!state.selectedMap">请先在右侧选择地图</div>
+      <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
     </div>
     <div class="config">
       <a-card
@@ -27,18 +27,13 @@
         <!-- 2. 指定初始位姿 -->
         <div class="btn" v-if="state.curState === 2">
           <a-button type="primary" @click="finishAdding"> 完成 </a-button>
-          <a-button type="primary" @click="selectMap">重新选择</a-button>
+          <!-- <a-button type="primary" @click="selectMap">重新选择地图</a-button> -->
+          <a-button @click="cancelInitPose">取消</a-button>
         </div>
         <!-- 3. 导航 -->
         <div class="btn" v-if="state.curState === 3">
           <JoyStick></JoyStick>
-          <a-button
-            @click="confirmConnect"
-            type="primary"
-            v-if="state.connecting"
-            >确认连接</a-button
-          >
-          <a-button @click="connectMap" v-else>连接地图</a-button>
+          <a-button @click="connectMap">连接地图</a-button>
           <div class="switch">
             <a-switch
               v-model:checked="state.navigating"
@@ -46,9 +41,7 @@
             ></a-switch
             >导航模式
           </div>
-          <a-button @click="crossNav" type="primary" v-if="!state.connecting"
-            >跨图导航</a-button
-          >
+          <a-button @click="crossNav" type="primary">跨图导航</a-button>
           <a-button
             @click="pauseNav"
             type="primary"
@@ -60,7 +53,7 @@
         <!-- 4. 暂停导航 -->
         <div class="btn" v-if="state.curState === 4">
           <a-button
-            @click="subscribeMapTopic"
+            @click="resumeNav"
             type="primary"
             :icon="h(CaretRightOutlined)"
             >恢复导航</a-button
@@ -72,6 +65,13 @@
             type="primary"
             danger
             >结束导航</a-button
+          >
+        </div>
+        <!-- 5. 连接地图 -->
+        <div class="btn" v-if="state.curState === 5">
+          <a-button @click="confirmConnect" type="primary">确认连接</a-button>
+          <a-button v-if="state.connecting" @click="cancelConnect"
+            >取消连接操作</a-button
           >
         </div>
       </a-card>
@@ -94,7 +94,6 @@ import type { TableOptions } from '@/typings/component'
 import type { MessageData } from '@foxglove/ws-protocol'
 import DrawManage from '@/utils/draw'
 import { message, notification } from 'ant-design-vue'
-import { useRtcClientStore } from '@/stores/rtcClient'
 
 interface State {
   maps: Map[]
@@ -105,11 +104,12 @@ interface State {
   curState: number
   navigating: boolean
   crossing: boolean
+  candidateMap: Map | null
+  lastState: number
 }
 
 const foxgloveClientStore = useFoxgloveClientStore()
 const globalStore = useGlobalStore()
-const rtcClientStore = useRtcClientStore()
 
 const state = reactive<State>({
   maps: [],
@@ -120,6 +120,8 @@ const state = reactive<State>({
   curState: 0, // 当前状态step
   navigating: false, // 导航ing
   crossing: false, // 跨图导航ing
+  candidateMap: null, // 选择的地图，未指定初始位姿
+  lastState: 0 // 上一个状态，针对指定初始位姿的取消操作
 })
 
 const STATE_MAP = {
@@ -127,7 +129,8 @@ const STATE_MAP = {
   PREVIEWING: 1, // 预览地图
   INITING: 2, // 初始化位姿
   NAVIGATING: 3, // 导航
-  PAUSING: 4 // 暂停
+  PAUSING: 4, // 暂停
+  CONNECTING: 5 // 连接地图
 }
 
 watch(
@@ -183,20 +186,20 @@ const tableOptions: TableOptions = {
           }
         }
         globalStore.setLoading(true, '加载地图中')
-        state.selectedMap = record
+        state.candidateMap = record
 
         foxgloveClientStore
           .callService('/tiered_nav_state_machine/get_grid_map', {
             info: record
           })
           .then((res) => {
+            state.drawManage.unSubscribeCarPosition()
+            state.drawManage.unSubscribeScanPoints()
+            unSubscribeMapTopic()
             const wrap = document.getElementById('navigationMap') as HTMLElement
             state.drawManage.drawGridMap(wrap, res.map, true)
             state.curState = STATE_MAP.PREVIEWING
             globalStore.setLoading(false)
-            state.drawManage.unSubscribeCarPosition()
-            state.drawManage.unSubscribeScanPoints()
-            unSubscribeMapTopic()
             initPose()
             globalStore.closeModal()
           })
@@ -236,10 +239,11 @@ const initPose = () => {
   state.drawManage.pzRemoveListener()
   state.drawManage.navAddListener()
   state.curState = STATE_MAP.INITING
+  state.drawManage.resetPanzoom()
   notification.success({
     placement: 'topRight',
     message: `请在地图按下并拖动鼠标来指定${
-      state.crossing ? '导航目标位姿' : '初始位姿'
+      state.crossing ? '【导航目标位姿】' : '【初始位姿】'
     }`,
     duration: 3
   })
@@ -259,8 +263,11 @@ const finishAdding = async () => {
     )
   // 跨图导航
   if (state.crossing) {
+    state.selectedMap = state.candidateMap
+    state.candidateMap = null
     state.drawManage.publishNavigation(state.selectedMap?.map_name)
     subscribeMapTopic()
+    state.curState = STATE_MAP.NAVIGATING
     state.crossing = false
     state.drawManage.navDisabled = false
   } else {
@@ -268,7 +275,7 @@ const finishAdding = async () => {
     foxgloveClientStore
       .callService('/tiered_nav_state_machine/load_map', {
         p: {
-          map_name: state.selectedMap?.map_name,
+          map_name: state.candidateMap?.map_name,
           t: {
             translation: state.drawManage.navTranslation,
             rotation: state.drawManage.navRotation
@@ -277,9 +284,13 @@ const finishAdding = async () => {
       })
       .then(() => {
         subscribeMapTopic()
+        state.curState = STATE_MAP.NAVIGATING
+        if (state.connecting) state.curState = STATE_MAP.CONNECTING
         state.drawManage.advertiseNavTopic()
         state.drawManage.navDisabled = false
         globalStore.setLoading(false)
+        state.selectedMap = state.candidateMap
+        state.candidateMap = null
       })
   }
 }
@@ -287,7 +298,6 @@ const finishAdding = async () => {
 // 订阅map话题
 const subscribeMapTopic = () => {
   globalStore.setLoading(true)
-  state.curState = STATE_MAP.NAVIGATING
   state.drawManage.navRemoveListener()
   state.drawManage.pzAddListener()
   globalStore.setLoading(false)
@@ -296,7 +306,6 @@ const subscribeMapTopic = () => {
     foxgloveClientStore.subscribeTopic('/map').then((res) => {
       state.mapSubId = res
       foxgloveClientStore.listenMessage(mapMsgHandler)
-      state.curState = STATE_MAP.NAVIGATING
       globalStore.setLoading(false)
     })
   }
@@ -329,6 +338,7 @@ const mapMsgHandler = ({
 // 连接地图
 const connectMap = () => {
   state.connecting = true
+  state.lastState = state.curState
   globalStore.openModal({
     title: '选择地图',
     type: 'table',
@@ -346,6 +356,9 @@ const connectMap = () => {
 
 // 选择地图
 const selectMap = () => {
+  state.lastState = state.curState
+  console.log(state.lastState)
+
   listMaps().then((res) => {
     globalStore.openModal({
       title: '选择地图',
@@ -388,12 +401,16 @@ const confirmConnect = () => {
 const crossNav = () => {
   state.crossing = true
   state.navigating = false
+  state.lastState = state.curState
   globalStore.openModal({
     title: '跨图导航',
     type: 'table',
     tableOptions,
     dataSource: state.maps,
-    showFooter: false
+    showFooter: false,
+    onCancel: () => {
+      state.crossing = false
+    }
   })
 }
 
@@ -419,6 +436,12 @@ const pauseNav = () => {
   state.drawManage.navRemoveListener()
   state.drawManage.pzAddListener()
   state.curState = STATE_MAP.PAUSING
+}
+
+// 恢复导航
+const resumeNav = () => {
+  state.curState = STATE_MAP.NAVIGATING
+  subscribeMapTopic()
 }
 
 // 结束导航
@@ -449,6 +472,29 @@ const closeNav = () => {
         })
     }
   })
+}
+
+// 取消指定初始位姿
+const cancelInitPose = () => {
+  state.candidateMap = null
+  if (state.selectedMap) {
+    subscribeMapTopic()
+    state.drawManage.subscribeCarPosition()
+    state.drawManage.subscribeScanPoints()
+    state.curState = state.lastState
+    console.log(state.lastState, state.curState)
+    if (state.connecting) state.connecting = false
+  } else {
+    state.drawManage.clear()
+    state.curState = STATE_MAP.WAITING
+  }
+}
+
+// 取消连接地图操作
+const cancelConnect = () => {
+  state.connecting = false
+  message.success('连接操作已取消')
+  state.curState = state.lastState
 }
 
 onBeforeUnmount(() => {
