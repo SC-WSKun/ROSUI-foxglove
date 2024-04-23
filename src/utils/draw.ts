@@ -512,7 +512,7 @@ export default class DrawManage {
       [key: string]: any
     }[]
   ) {
-    transforms.forEach((transform) => {
+    transforms?.forEach((transform) => {
       const { transform_map } = dict
       _.set(
         this,
