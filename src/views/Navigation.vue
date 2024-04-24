@@ -70,9 +70,7 @@
         <!-- 5. 连接地图 -->
         <div class="btn" v-if="state.curState === 5">
           <a-button @click="confirmConnect" type="primary">确认连接</a-button>
-          <a-button v-if="state.connecting" @click="cancelConnect"
-            >取消连接操作</a-button
-          >
+          <a-button @click="cancelConnect">取消连接操作</a-button>
         </div>
       </a-card>
     </div>
@@ -386,6 +384,7 @@ const confirmConnect = () => {
           console.log('connect res', res1)
           if (res1 === 0) message.success('连接成功')
           state.connecting = false
+          state.curState = STATE_MAP.NAVIGATING
           globalStore.setLoading(false)
         })
         .catch((err) => {
