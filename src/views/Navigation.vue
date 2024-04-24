@@ -27,7 +27,6 @@
         <!-- 2. 指定初始位姿 -->
         <div class="btn" v-if="state.curState === 2">
           <a-button type="primary" @click="finishAdding"> 完成 </a-button>
-          <!-- <a-button type="primary" @click="selectMap">重新选择地图</a-button> -->
           <a-button @click="cancelInitPose">取消</a-button>
         </div>
         <!-- 3. 导航 -->
@@ -37,7 +36,6 @@
           <div class="switch">
             <a-switch
               v-model:checked="state.navigating"
-              @change="switchNavigation"
             ></a-switch
             >导航模式
           </div>
@@ -149,6 +147,13 @@ watch(
   }
 )
 
+watch(
+  () => state.navigating,
+  () => {
+    switchNavigation()
+  }
+)
+
 // 地图列表表格配置项
 const tableOptions: TableOptions = {
   items: [
@@ -234,17 +239,9 @@ const listMaps = () => {
 // 指定初始位姿
 const initPose = () => {
   state.drawManage.navDisabled = true
-  state.drawManage.pzRemoveListener()
-  state.drawManage.navAddListener()
   state.curState = STATE_MAP.INITING
   state.drawManage.resetPanzoom()
-  notification.success({
-    placement: 'topRight',
-    message: `请在地图按下并拖动鼠标来指定${
-      state.crossing ? '【导航目标位姿】' : '【初始位姿】'
-    }`,
-    duration: 3
-  })
+  state.navigating = true
 }
 
 // 完成初始位姿指定
@@ -296,8 +293,7 @@ const finishAdding = async () => {
 // 订阅map话题
 const subscribeMapTopic = () => {
   globalStore.setLoading(true)
-  state.drawManage.navRemoveListener()
-  state.drawManage.pzAddListener()
+  state.navigating = false
   globalStore.setLoading(false)
   if (state.mapSubId === -1) {
     globalStore.setLoading(true)
@@ -420,7 +416,9 @@ const switchNavigation = () => {
     state.drawManage.navAddListener()
     notification.success({
       placement: 'topRight',
-      message: '请在地图上选择导航点',
+      message: `请在地图按下并拖动鼠标来指定${
+      state.crossing ? '【导航目标位姿】' : '【初始位姿】'
+    }`,
       duration: 3
     })
   } else {
@@ -432,8 +430,6 @@ const switchNavigation = () => {
 // 暂停导航
 const pauseNav = () => {
   state.navigating = false
-  state.drawManage.navRemoveListener()
-  state.drawManage.pzAddListener()
   state.curState = STATE_MAP.PAUSING
 }
 
@@ -459,8 +455,7 @@ const closeNav = () => {
         .then(() => {
           unSubscribeMapTopic()
           state.drawManage.unSubscribeCarPosition()
-          state.drawManage.navRemoveListener()
-          state.drawManage.pzRemoveListener()
+          state.navigating = false
           state.drawManage.unSubscribeScanPoints()
           state.drawManage.unAdvertiseNavTopic()
           state.curState = STATE_MAP.WAITING
