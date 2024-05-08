@@ -294,6 +294,9 @@ const saveMap = () => {
           name: data.name
         })
         .then((res: any) => {
+          if(!res.result) {
+            throw new Error('保存地图失败')
+          }
           console.log('save_res', res)
           globalStore.setLoading(false)
           message.success('保存地图成功')

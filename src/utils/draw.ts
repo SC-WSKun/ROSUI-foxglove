@@ -558,6 +558,8 @@ export default class DrawManage {
   clear() {
     this.imgWrap?.remove()
     this.imgWrap = null
+    this.pzRemoveListener()
+    this.panzoomIns = null
   }
 }
 
