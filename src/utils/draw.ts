@@ -52,28 +52,6 @@ export default class DrawManage {
   } | null = null
   carRenderLock: boolean = false
 
-  /**   Transform Tree
-   *                             map
-   *                              |
-   *                             odom
-   *                              |
-   *                        base_footprint
-   *                              |
-   *                           base_link
-   *                              |
-   *    ———————————————————————————————————————————————————————
-   *    |           |             |             |             |
-   * imu_link   laser_link    left_wheel    right_wheel   base_scan
-   */
-  // odomToMap: Transform | null = null
-  // baseFootprintToOdom: Transform | null = null
-  // baseLinkToBaseFootprint: Transform | null = null
-  // baseScanToBaseLink: Transform | null = null
-  // imuLinkToBaseLink: Transform | null = null
-  // laserLinkToBaseLink: Transform | null = null
-  // leftWheelToBaseLink: Transform | null = null
-  // rightWheelToBaseLink: Transform | null = null
-
   navDisabled: boolean = false
   laserFrame: string | null = null
 

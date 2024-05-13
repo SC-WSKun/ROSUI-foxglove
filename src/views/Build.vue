@@ -294,7 +294,7 @@ const saveMap = () => {
           name: data.name
         })
         .then((res: any) => {
-          if(!res.result) {
+          if (!res.result) {
             throw new Error('保存地图失败')
           }
           console.log('save_res', res)
@@ -338,6 +338,9 @@ const closeBuild = () => {
 }
 
 onBeforeUnmount(() => {
+  foxgloveClientStore.callService('/tiered_nav_state_machine/switch_mode', {
+    mode: 0
+  })
   unSubscribeMapTopic()
   state.drawManage.unSubscribeCarPosition()
   state.drawManage.unSubscribeScanPoints()

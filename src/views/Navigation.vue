@@ -492,6 +492,9 @@ const cancelConnect = () => {
 }
 
 onBeforeUnmount(() => {
+  foxgloveClientStore.callService('/tiered_nav_state_machine/switch_mode', {
+    mode: 0
+  })
   state.drawManage?.pzRemoveListener()
   state.drawManage?.navRemoveListener()
   state.drawManage.unSubscribeCarPosition()
