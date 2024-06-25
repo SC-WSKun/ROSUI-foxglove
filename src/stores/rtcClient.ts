@@ -22,7 +22,7 @@ export const useRtcClientStore = defineStore('rtcClient', () => {
     return new Promise((resolve, reject) => {
       // 与信令服务器进行连接
       state.socket = new WebSocket(
-        `ws://222.201.144.170:8020/robot_webrtc/${robotId}/signaling`
+        `wss://robotmgr2.mcurobot.com/robot_webrtc/${robotId}/signaling`
       )
       state.socket.onopen = () => sendMsg('rtc_setup', '')
       state.socket.onmessage = (event) => {
