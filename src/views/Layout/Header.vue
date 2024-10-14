@@ -11,15 +11,10 @@
           <DownOutlined :style="{ fontSize: '12px' }" />
         </a>
         <template #overlay>
-          <a-empty
-            v-if="!menus.length"
-            :image="emptyImage"
-            description="no data"
-            :image-style="{
-              margin: '30px 40px',
-              marginBottom: '10px'
-            }"
-          ></a-empty>
+          <a-empty v-if="!menus.length" :image="emptyImage" description="no data" :image-style="{
+            margin: '30px 40px',
+            marginBottom: '10px'
+          }"></a-empty>
           <a-menu @click="handleMenuClick" v-else>
             <a-menu-item v-for="item in menus" :key="item.key">
               <span>{{ item.text }}</span>
@@ -42,7 +37,7 @@ import { useRouter } from 'vue-router'
 import { useGlobalStore } from '@/stores/global'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useRtcClientStore } from '@/stores/rtcClient'
-import type P2PSocket from '@/utils/p2psocket'
+import { FoxgloveClient } from '@foxglove/ws-protocol'
 
 const router = useRouter()
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
@@ -114,10 +109,10 @@ const handleConnect = () => {
             reject('连接超时，请确认ID是否正确')
           }
         })
-        const socket: P2PSocket = await rtcClientStore.initRtcClient(record.id)
+        // const socket: P2PSocket = await rtcClientStore.initRtcClient(record.id)
         clearInterval(connectTimer as number)
         connectTimer = null
-        foxgloveClientStore.initClient(socket)
+        foxgloveClientStore.initClient()
         globalStore.setLoading(false)
         globalStore.setConnected(true)
         resolve('连接成功')

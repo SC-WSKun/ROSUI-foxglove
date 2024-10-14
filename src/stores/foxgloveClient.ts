@@ -10,7 +10,6 @@ import {
 import { MessageReader, MessageWriter } from '@foxglove/rosmsg2-serialization'
 import _ from 'lodash'
 import { parse as parseMessageDefinition } from '@foxglove/rosmsg'
-import type P2PSocket from '@/utils/p2psocket'
 import { useGlobalStore } from './global'
 
 interface Sub {
@@ -43,9 +42,9 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    * init the client & storage channels and services
    * @param socket
    */
-  function initClient(socket: P2PSocket) {
+  function initClient() {
     state.client = new FoxgloveClient({
-      ws: socket
+      ws: new WebSocket("ws://10.3.51.184:8765", [FoxgloveClient.SUPPORTED_SUBPROTOCOL])
     })
     state.client.on('advertise', (channels: Channel[]) => {
       channels.forEach((channel: Channel) => {
