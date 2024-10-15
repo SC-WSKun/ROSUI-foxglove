@@ -1,0 +1,10 @@
+version: '3'
+services:
+  foxglove-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: registry.cn-hangzhou.aliyuncs.com/b3351/foxglove-ui:latest
+    ports:
+      - "4451:4451"
+    restart: always
