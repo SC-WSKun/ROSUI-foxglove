@@ -1,15 +1,15 @@
-import { reactive } from 'vue'
-import { defineStore } from 'pinia'
-import type { ModalOptions } from '@/typings/component'
-import type { Transform } from '@/typings'
-import dict from '@/dict'
-import _ from 'lodash'
+import { reactive } from "vue";
+import { defineStore } from "pinia";
+import type { ModalOptions } from "@/typings/component";
+import type { Transform } from "@/typings";
+import dict from "@/dict";
+import _ from "lodash";
 
 type GlobalState = {
-  loading: boolean
-  loadingTip: string
-  modalRef: any
-  connected: boolean
+  loading: boolean;
+  loadingTip: string;
+  modalRef: any;
+  connected: boolean;
   /**   Transform Tree
    *                             map
    *                              |
@@ -23,20 +23,21 @@ type GlobalState = {
    *    |           |             |             |             |
    * imu_link   laser_link    left_wheel    right_wheel   base_scan
    */
-  odomToMap: Transform | null
-  baseFootprintToOdom: Transform | null
-  baseLinkToBaseFootprint: Transform | null
-  baseScanToBaseLink: Transform | null
-  imuLinkToBaseLink: Transform | null
-  laserLinkToBaseLink: Transform | null
-  leftWheelToBaseLink: Transform | null
-  rightWheelToBaseLink: Transform | null
-}
+  odomToMap: Transform | null;
+  baseFootprintToOdom: Transform | null;
+  baseLinkToBaseFootprint: Transform | null;
+  baseScanToBaseLink: Transform | null;
+  imuLinkToBaseLink: Transform | null;
+  laserLinkToBaseLink: Transform | null;
+  leftWheelToBaseLink: Transform | null;
+  rightWheelToBaseLink: Transform | null;
+  showLabelInput: boolean;
+};
 
-export const useGlobalStore = defineStore('global', () => {
+export const useGlobalStore = defineStore("global", () => {
   const state = reactive<GlobalState>({
     loading: false,
-    loadingTip: '加载中...',
+    loadingTip: "加载中...",
     modalRef: null,
     connected: false,
     odomToMap: null,
@@ -46,53 +47,54 @@ export const useGlobalStore = defineStore('global', () => {
     imuLinkToBaseLink: null,
     laserLinkToBaseLink: null,
     leftWheelToBaseLink: null,
-    rightWheelToBaseLink: null
-  })
+    rightWheelToBaseLink: null,
+    showLabelInput: false,
+  });
 
   function setLoading(loading: boolean, loadingTip?: string) {
-    state.loadingTip = loadingTip || '加载中...'
-    state.loading = loading
+    state.loadingTip = loadingTip || "加载中...";
+    state.loading = loading;
   }
 
   function setModalRef(modalRef: any) {
-    state.modalRef = modalRef
+    state.modalRef = modalRef;
   }
 
   function setConnected(connected: boolean) {
-    state.connected = connected
+    state.connected = connected;
   }
 
   function isConnected() {
-    return state.connected
+    return state.connected;
   }
 
   function openModal(modalOptions: ModalOptions) {
-    state.modalRef.openModal(modalOptions)
+    state.modalRef.openModal(modalOptions);
   }
 
   function closeModal() {
-    state.modalRef.closeModal()
+    state.modalRef.closeModal();
   }
 
   function updateTransform(
     transforms: {
-      transform: Transform
-      child_frame_id: string
-      [key: string]: any
-    }[]
+      transform: Transform;
+      child_frame_id: string;
+      [key: string]: any;
+    }[],
   ) {
     transforms.forEach((transform) => {
-      const { transform_map } = dict
+      const { transform_map } = dict;
       _.set(
         state,
         _.get(transform_map, transform.child_frame_id),
-        transform.transform
-      )
-    })
+        transform.transform,
+      );
+    });
   }
 
   function getTransform(transformKey: string) {
-    return _.get(state, transformKey)
+    return _.get(state, transformKey);
   }
 
   return {
@@ -104,6 +106,6 @@ export const useGlobalStore = defineStore('global', () => {
     openModal,
     closeModal,
     updateTransform,
-    getTransform
-  }
-})
+    getTransform,
+  };
+});
