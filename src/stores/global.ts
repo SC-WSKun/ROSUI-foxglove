@@ -97,6 +97,10 @@ export const useGlobalStore = defineStore("global", () => {
     return _.get(state, transformKey);
   }
 
+  function switchLabelInput() {
+    state.showLabelInput = !state.showLabelInput;
+  }
+
   return {
     state,
     setLoading,
@@ -107,5 +111,6 @@ export const useGlobalStore = defineStore("global", () => {
     closeModal,
     updateTransform,
     getTransform,
+    switchLabelInput,
   };
 });

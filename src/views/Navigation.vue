@@ -73,12 +73,15 @@
       </a-card>
     </div>
     <a-modal
-      v-model:open="state.showLabelInput"
+      v-model:open="globalStore.state.showLabelInput"
       title="添加标记"
       @ok="confirmLabel"
       @cancel="cancelLabel"
     >
-      <a-input v-model="state.newLabelName" placeholder="请输入标记名称" />
+      <a-input
+        v-model:value="state.newLabelName"
+        placeholder="请输入标记名称"
+      />
     </a-modal>
   </div>
 </template>
@@ -92,7 +95,7 @@ import {
   StopOutlined,
 } from "@ant-design/icons-vue";
 import { useGlobalStore } from "@/stores/global";
-import { onBeforeUnmount, onMounted, reactive, h, watch } from "vue";
+import { ref, onBeforeUnmount, onMounted, reactive, h, watch } from "vue";
 import { type GridMap, type Map } from "@/typings";
 import type { TableOptions } from "@/typings/component";
 import type { MessageData } from "@foxglove/ws-protocol";
@@ -111,7 +114,6 @@ interface State {
   crossing: boolean;
   candidateMap: Map | null;
   lastState: number;
-  showLabelInput: boolean;
   newLabelName: string;
 }
 
@@ -130,7 +132,6 @@ const state = reactive<State>({
   crossing: false, // 跨图导航ing
   candidateMap: null, // 选择的地图，未指定初始位姿
   lastState: 0, // 上一个状态，针对指定初始位姿的取消操作
-  showLabelInput: false,
   newLabelName: "",
 });
 
@@ -516,8 +517,6 @@ const cancelConnect = () => {
 
 // 切换标点模式
 const switchMarking = () => {
-  console.log("marking:", state.marking);
-  // todo: 完成标点模式
   if (state.marking) {
     state.drawManage.labelAddListener();
     notification.success({
@@ -531,14 +530,14 @@ const switchMarking = () => {
 };
 
 const confirmLabel = () => {
-  console.log("confirm");
+  console.log("confirm:", state.newLabelName);
   state.drawManage.addLabel(state.newLabelName);
-  state.showLabelInput = false;
+  globalStore.switchLabelInput();
 };
 
 const cancelLabel = () => {
   console.log("cancel add label");
-  state.showLabelInput = false;
+  globalStore.switchLabelInput();
 };
 
 onBeforeUnmount(() => {

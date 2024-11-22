@@ -627,7 +627,8 @@ export default class DrawManage {
     );
 
     if (!this.labelDisabled) {
-      this.addLabel("test1");
+      this.globalStore.switchLabelInput();
+      // this.addLabel("test1");
     }
   };
   // 添加标点
