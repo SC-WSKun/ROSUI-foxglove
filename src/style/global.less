@@ -50,7 +50,7 @@
   transition: all 0.5s;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     width: 0;
     height: 0;
@@ -89,4 +89,40 @@
   height: 4px;
   background: red;
   border-radius: 50%;
+}
+
+// 标点容器样式
+.label-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+// 标点样式
+.nav-label {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 71;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  margin-top: -2px;
+  border: 2px solid blue;
+  border-radius: 50%;
+  overflow: hidden;
+  font-size: 8px;
+  text-align: center;
+  line-height: 20px;
+  color: blue;
+  transition: 0.2s linear;
+  &:hover {
+    width: 24px;
+    height: 24px;
+    margin-left: -12px;
+    margin-top: -12px;
+    border: 2px solid green;
+  }
 }

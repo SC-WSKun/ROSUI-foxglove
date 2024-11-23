@@ -101,6 +101,10 @@ export const useGlobalStore = defineStore("global", () => {
     state.showLabelInput = !state.showLabelInput;
   }
 
+  function closeLabelInput() {
+    state.showLabelInput = false;
+  }
+
   return {
     state,
     setLoading,
@@ -112,5 +116,6 @@ export const useGlobalStore = defineStore("global", () => {
     updateTransform,
     getTransform,
     switchLabelInput,
+    closeLabelInput,
   };
 });

@@ -532,12 +532,12 @@ const switchMarking = () => {
 const confirmLabel = () => {
   console.log("confirm:", state.newLabelName);
   state.drawManage.addLabel(state.newLabelName);
-  globalStore.switchLabelInput();
+  globalStore.closeLabelInput();
 };
 
 const cancelLabel = () => {
   console.log("cancel add label");
-  globalStore.switchLabelInput();
+  globalStore.closeLabelInput();
 };
 
 onBeforeUnmount(() => {

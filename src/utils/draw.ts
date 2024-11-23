@@ -21,6 +21,7 @@ export default class DrawManage {
   arrow: HTMLImageElement | null = null;
   car: HTMLElement | null = null;
   pointsWrap: HTMLElement | null = null;
+  labelWrap: HTMLElement | null = null;
   scanPoints: HTMLElement[] = [];
   addingNav: boolean = false;
   navTranslation: {
@@ -67,18 +68,18 @@ export default class DrawManage {
         if (subscriptionId === this.tfSubId && !this.carRenderLock) {
           const parseData = this.foxgloveClientStore.readMsgWithSubId(
             subscriptionId,
-            data,
+            data
           );
           this.updateTransform(parseData?.transforms);
           this.globalStore.updateTransform(parseData?.transforms);
           this.carPose = mapToBaseFootprint(
             this.globalStore.getTransform("odomToMap"),
-            this.globalStore.getTransform("baseFootprintToOdom"),
+            this.globalStore.getTransform("baseFootprintToOdom")
           );
           this.updateCarPose();
         }
       },
-      5,
+      5
     );
     this.scanPointsListener = ({
       op,
@@ -89,7 +90,7 @@ export default class DrawManage {
       if (subscriptionId === this.tfStaticSubId) {
         const parseData = this.foxgloveClientStore.readMsgWithSubId(
           subscriptionId,
-          data,
+          data
         );
         console.log("tfStatic", parseData);
         this.updateTransform(parseData.transforms);
@@ -100,7 +101,7 @@ export default class DrawManage {
         this.scanPointsTime = time;
         const parseData = this.foxgloveClientStore.readMsgWithSubId(
           subscriptionId,
-          data,
+          data
         );
         this.laserFrame = parseData.header.frame_id;
         let points = transformPointCloud(parseData);
@@ -180,6 +181,59 @@ export default class DrawManage {
     }
   }
 
+  async drawLabel() {
+    if (!this.mapInfo || !this.imgWrap) return;
+    if (!this.labelWrap) {
+      this.labelWrap = document.createElement("div");
+      this.labelWrap.className = "label-wrap";
+    }
+    this.labelWrap.innerHTML = "";
+    this.imgWrap.appendChild(this.labelWrap);
+    const { result, labels } = await this.foxgloveClientStore.callService(
+      "/label_manager/get_labels"
+    );
+    if (result !== true) {
+      message.error("获取标签失败");
+      return;
+    }
+    console.log("get labels: ", labels);
+    labels.forEach((label: { label_name: string; pose: any }) => {
+      if (!this.mapInfo || !this.imgWrap) return;
+      const element = document.createElement("div");
+      element.className = "nav-label";
+      const { x, y } = worldCoordinateToPixel(
+        label.pose.position.x,
+        label.pose.position.y,
+        this.scale,
+        this.mapInfo.resolution,
+        this.mapInfo.origin.position.x,
+        this.mapInfo.origin.position.y
+      );
+      element.innerHTML = label.label_name;
+      element.style.left = `${x}px`;
+      element.style.top = `${this.imgWrap.offsetHeight - y}px`;
+      element.addEventListener("click", () => {
+        console.log("click label:", label.label_name);
+        this.removeLabel(label.label_name);
+      });
+      this.labelWrap?.appendChild(element);
+    });
+  }
+
+  async removeLabel(label_name: string) {
+    const { result } = await this.foxgloveClientStore.callService(
+      "/label_manager/del_label",
+      { label_name }
+    );
+    if (result !== true) {
+      message.error("删除标签失败");
+      return;
+    } else {
+      message.success("标签删除成功");
+      this.drawLabel();
+    }
+  }
+
   // 为画布添加缩放和平移拖拽功能
   setPanzoom(imgWrap: HTMLElement) {
     this.panzoomIns = Panzoom(imgWrap, {
@@ -232,6 +286,7 @@ export default class DrawManage {
     this.img?.addEventListener("mouseup", this.handleMouseup);
     this.img?.addEventListener("mouseleave", this.handleMouseleave);
     this.img?.addEventListener("wheel", this.panzoomIns!.zoomWithWheel);
+    if (this.labelWrap) this.labelWrap.style.pointerEvents = "none";
   }
 
   // 移除地图交互事件监听
@@ -242,6 +297,9 @@ export default class DrawManage {
     this.img?.removeEventListener("mouseup", this.handleMouseup);
     this.img?.removeEventListener("mouseleave", this.handleMouseleave);
     this.img?.removeEventListener("wheel", this.panzoomIns!.zoomWithWheel);
+    if(this.labelWrap) this.labelWrap.style.pointerEvents = "auto";
+    this.labelWrap?.removeEventListener("mousedown", this.handleMousedown);
+    this.labelWrap?.removeEventListener("mouseup", this.handleMouseup);
   }
 
   // 添加导航箭头的鼠标事件监听
@@ -268,7 +326,7 @@ export default class DrawManage {
       this.mapInfo.resolution,
       this.mapInfo.origin.position.x,
       this.mapInfo.origin.position.y,
-      this.mapInfo.height,
+      this.mapInfo.height
     );
     console.log(x, y, this.scale);
 
@@ -312,7 +370,7 @@ export default class DrawManage {
       this.mapInfo.resolution,
       this.mapInfo.origin.position.x,
       this.mapInfo.origin.position.y,
-      this.mapInfo.height,
+      this.mapInfo.height
     );
     if (!this.navTranslation) {
       console.log("navTranslation is not found");
@@ -322,7 +380,7 @@ export default class DrawManage {
       this.navTranslation.x,
       this.navTranslation.y,
       x,
-      y,
+      y
     );
     // 处于导航模式
     if (this.goalChannelId !== undefined && !this.navDisabled) {
@@ -429,7 +487,7 @@ export default class DrawManage {
       this.scale,
       this.mapInfo.resolution,
       this.mapInfo.origin.position.x,
-      this.mapInfo.origin.position.y,
+      this.mapInfo.origin.position.y
     );
     this.car.style.left = `${x}px`;
     this.car.style.top = `${this.imgWrap.offsetHeight - y}px`;
@@ -458,7 +516,7 @@ export default class DrawManage {
         this.scale,
         this.mapInfo!.resolution,
         this.mapInfo!.origin.position.x,
-        this.mapInfo!.origin.position.y,
+        this.mapInfo!.origin.position.y
       );
       pointEl.style.left = `${x}px`;
       pointEl.style.top = `${this.imgWrap!.offsetHeight - y}px`;
@@ -490,14 +548,14 @@ export default class DrawManage {
       transform: Transform;
       child_frame_id: string;
       [key: string]: any;
-    }[],
+    }[]
   ) {
     transforms?.forEach((transform) => {
       const { transform_map } = dict;
       _.set(
         this,
         _.get(transform_map, transform.child_frame_id),
-        transform.transform,
+        transform.transform
       );
     });
   }
@@ -511,16 +569,16 @@ export default class DrawManage {
     tmp = applyTransform(
       position,
       // _.get(this, _.get(transform_map, this.laserFrame))
-      this.globalStore.getTransform(_.get(transform_map, this.laserFrame)),
+      this.globalStore.getTransform(_.get(transform_map, this.laserFrame))
     );
     if (!tmp) return null;
     tmp = applyTransform(
       tmp,
-      this.globalStore.getTransform("baseLinkToBaseFootprint"),
+      this.globalStore.getTransform("baseLinkToBaseFootprint")
     );
     tmp = applyTransform(
       tmp,
-      this.globalStore.getTransform("baseFootprintToOdom"),
+      this.globalStore.getTransform("baseFootprintToOdom")
     );
     tmp = applyTransform(tmp, this.globalStore.getTransform("odomToMap"));
     return tmp;
@@ -542,18 +600,20 @@ export default class DrawManage {
     this.panzoomIns = null;
   }
 
-  // 添加导航点交互监听
+  // 添加标签交互监听
   labelAddListener() {
     console.log("add label method listener");
     this.pzRemoveListener();
-    this.img?.addEventListener("mousedown", this.labelHandleMousedown);
-    this.img?.addEventListener("mouseup", this.labelHandleMouseup);
+    this.drawLabel();
+    this.labelWrap?.addEventListener("mousedown", this.labelHandleMousedown);
+    this.labelWrap?.addEventListener("mouseup", this.labelHandleMouseup);
   }
 
-  // 移除导航点交互监听
+  // 移除标签交互监听
   labelRemoveListener() {
-    this.img?.addEventListener("mousedown", this.labelHandleMousedown);
-    this.img?.removeEventListener("mouseup", this.labelHandleMouseup);
+    this.labelWrap?.addEventListener("mousedown", this.labelHandleMousedown);
+    this.labelWrap?.removeEventListener("mouseup", this.labelHandleMouseup);
+    if (this.labelWrap) this.labelWrap.innerHTML = "";
   }
 
   // 添加导航箭头的鼠标事件监听
@@ -580,7 +640,7 @@ export default class DrawManage {
       this.mapInfo.resolution,
       this.mapInfo.origin.position.x,
       this.mapInfo.origin.position.y,
-      this.mapInfo.height,
+      this.mapInfo.height
     );
     console.log(x, y, this.scale);
 
@@ -613,7 +673,7 @@ export default class DrawManage {
       this.mapInfo.resolution,
       this.mapInfo.origin.position.x,
       this.mapInfo.origin.position.y,
-      this.mapInfo.height,
+      this.mapInfo.height
     );
     if (!this.navTranslation) {
       console.log("navTranslation is not found");
@@ -623,7 +683,7 @@ export default class DrawManage {
       this.navTranslation.x,
       this.navTranslation.y,
       x,
-      y,
+      y
     );
 
     if (!this.labelDisabled) {
@@ -637,9 +697,11 @@ export default class DrawManage {
       console.error("navTranslation not found");
       return;
     }
+    console.log(`add label name: ${label_name}`)
     console.log(
-      `add label x: ${this.navTranslation?.x}, y: ${this.navTranslation?.y}`,
+      `add label x: ${this.navTranslation?.x}, y: ${this.navTranslation?.y}`
     );
+    label_name = new TextEncoder().encode(label_name).toString();
     const { result } = await this.foxgloveClientStore?.callService(
       "/label_manager/add_label",
       {
@@ -651,10 +713,11 @@ export default class DrawManage {
             z: 0,
           },
         },
-      },
+      }
     );
     if (result === true) {
       message.success("添加标签成功");
+      this.drawLabel();
     } else {
       message.error("添加标签失败");
     }
@@ -669,7 +732,7 @@ const pixelToWorldCoordinate = (
   resolution: number,
   originX: number,
   originY: number,
-  gridHeight: number,
+  gridHeight: number
 ): { x: number; y: number } => {
   return {
     x: pixelOffsetX * scale * resolution + originX,
@@ -684,7 +747,7 @@ const worldCoordinateToPixel = (
   scale: number,
   resolution: number,
   originX: number,
-  originY: number,
+  originY: number
 ): { x: number; y: number } => {
   return {
     x: (worldX - originX) / (scale * resolution),
@@ -697,7 +760,7 @@ const coordinatesToQuaternion = (
   startX: number,
   startY: number,
   endX: number,
-  endY: number,
+  endY: number
 ): Quaternion => {
   // 计算向量
   const dx = endX - startX;
@@ -721,7 +784,7 @@ const coordinatesToQuaternion = (
 // map -> odom -> base_footprint
 const mapToBaseFootprint = (
   odomToMap: Transform | null,
-  baseFootprintToOdom: Transform | null,
+  baseFootprintToOdom: Transform | null
 ) => {
   if (!odomToMap || !baseFootprintToOdom) {
     return null;
@@ -734,7 +797,7 @@ const mapToBaseFootprint = (
     1.0 -
       2.0 *
         (odomToMap.rotation.y * odomToMap.rotation.y +
-          odomToMap.rotation.z * odomToMap.rotation.z),
+          odomToMap.rotation.z * odomToMap.rotation.z)
   );
   // 计算odom到base_footprint的偏航角
   const odomToBaseYaw = Math.atan2(
@@ -744,7 +807,7 @@ const mapToBaseFootprint = (
     1.0 -
       2.0 *
         (baseFootprintToOdom.rotation.y * baseFootprintToOdom.rotation.y +
-          baseFootprintToOdom.rotation.z * baseFootprintToOdom.rotation.z),
+          baseFootprintToOdom.rotation.z * baseFootprintToOdom.rotation.z)
   );
   // 计算map到odom的旋转矩阵
   const cosMapToOdom = Math.cos(mapToOdomYaw);
@@ -791,7 +854,7 @@ const transformPointCloud = (pointCloud: any) => {
 // 点云应用坐标系转换
 const applyTransform = (
   points: { x: number; y: number }[] | { x: number; y: number },
-  transform: Transform | null,
+  transform: Transform | null
 ) => {
   if (!transform || !points) return null;
   const { rotation, translation } = transform;
@@ -799,7 +862,7 @@ const applyTransform = (
     return points.map((point) => {
       const yaw = Math.atan2(
         2.0 * (rotation.w * rotation.z + rotation.x * rotation.y),
-        1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z),
+        1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z)
       );
       const rotatedX = Math.cos(yaw) * point.x - Math.sin(yaw) * point.y;
       const rotatedY = Math.sin(yaw) * point.x + Math.cos(yaw) * point.y;
@@ -811,7 +874,7 @@ const applyTransform = (
   } else {
     const yaw = Math.atan2(
       2.0 * (rotation.w * rotation.z + rotation.x * rotation.y),
-      1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z),
+      1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z)
     );
     const rotatedX = Math.cos(yaw) * points.x - Math.sin(yaw) * points.y;
     const rotatedY = Math.sin(yaw) * points.x + Math.cos(yaw) * points.y;
