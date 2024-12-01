@@ -39,6 +39,11 @@
           <div class="switch">
             <a-switch v-model:checked="state.marking"></a-switch>标点模式
           </div>
+          <div class="switch">
+            <a-switch v-model:checked="state.patroling"></a-switch>巡逻模式
+          </div>
+          <a-button @click="patrolManage" type="primary" v-show="state.patroling">巡逻管理</a-button>
+          <a-button @click="createVirtualWall" type="primary">新增虚拟墙</a-button>
           <a-button @click="crossNav" type="primary">跨图导航</a-button>
           <a-button
             @click="pauseNav"
@@ -95,22 +100,26 @@ import {
   StopOutlined,
 } from "@ant-design/icons-vue";
 import { useGlobalStore } from "@/stores/global";
+import { usePatrolStore } from "@/stores/patrol";
 import { ref, onBeforeUnmount, onMounted, reactive, h, watch } from "vue";
-import { type GridMap, type Map } from "@/typings";
+import { type GridMap, type Map, type GridPlan } from "@/typings";
 import type { TableOptions } from "@/typings/component";
 import type { MessageData } from "@foxglove/ws-protocol";
 import DrawManage from "@/utils/draw";
 import { message, notification } from "ant-design-vue";
+import Patrol from "@/components/Patrol.vue";
 
 interface State {
   maps: Map[];
   selectedMap: Map | null;
   mapSubId: number;
+  planSubId: number;
   drawManage: DrawManage;
   connecting: boolean;
   curState: number;
   navigating: boolean;
   marking: boolean;
+  patroling: boolean;
   crossing: boolean;
   candidateMap: Map | null;
   lastState: number;
@@ -119,16 +128,19 @@ interface State {
 
 const foxgloveClientStore = useFoxgloveClientStore();
 const globalStore = useGlobalStore();
+const patrolStore = usePatrolStore();
 
 const state = reactive<State>({
   maps: [],
   selectedMap: null,
   mapSubId: -1,
+  planSubId: -1, // 轨迹话题id
   drawManage: new DrawManage(),
   connecting: false, // 连接地图ing
   curState: 0, // 当前状态step
   navigating: false, // 导航ing
   marking: false, // 标点ing
+  patroling: false, // 巡逻ing
   crossing: false, // 跨图导航ing
   candidateMap: null, // 选择的地图，未指定初始位姿
   lastState: 0, // 上一个状态，针对指定初始位姿的取消操作
@@ -175,6 +187,13 @@ watch(
     switchMarking();
   },
 );
+
+watch(
+  () => state.patroling,
+  () => {
+    switchPatroling();
+  }
+)
 
 // 地图列表表格配置项
 const tableOptions: TableOptions = {
@@ -327,6 +346,7 @@ const subscribeMapTopic = () => {
       globalStore.setLoading(false);
     });
   }
+  subscribePlanTopic();
 };
 
 // 停止订阅map话题
@@ -334,6 +354,7 @@ const unSubscribeMapTopic = () => {
   foxgloveClientStore.stopListenMessage(mapMsgHandler);
   foxgloveClientStore.unSubscribeTopic(state.mapSubId);
   state.mapSubId = -1;
+  unSubscribePlanTopic();
 };
 
 // 地图消息监听回调
@@ -415,6 +436,56 @@ const confirmConnect = () => {
     },
   });
 };
+
+const planMsgHandler = ({
+  op,
+  subscriptionId,
+  timestamp,
+  data,
+}: MessageData) => {
+  if (state.planSubId === subscriptionId) {
+    const parseData = foxgloveClientStore.readMsgWithSubId(
+      state.planSubId,
+      data,
+    ) as GridPlan;
+    state.drawManage.drawCurve(parseData);
+  }
+}
+
+// 订阅轨迹话题
+const subscribePlanTopic = () => {
+  globalStore.setLoading(true);
+  foxgloveClientStore.subscribeTopic("/plan").then((res) => {
+    console.log('subscribePlanTopic', res);
+    state.planSubId = res;
+    foxgloveClientStore.listenMessage(planMsgHandler);
+  }).finally(() => {
+    globalStore.setLoading(false);
+  });
+};
+
+const unSubscribePlanTopic = () => {
+  foxgloveClientStore.stopListenMessage(planMsgHandler);
+  foxgloveClientStore.unSubscribeTopic(state.planSubId);
+  state.planSubId = -1;
+};
+
+// 巡逻管理 
+const patrolManage = () => {
+  globalStore.openModal({
+    title: "巡逻管理",
+    type: "custom",
+    props: {
+      drawManage: state.drawManage
+    },
+    component: Patrol,
+    showFooter: false,
+  });
+}
+
+const createVirtualWall = () => {
+  state.drawManage.createVirtualWall();
+}
 
 // 跨图导航
 const crossNav = () => {
@@ -528,6 +599,20 @@ const switchMarking = () => {
     state.drawManage.labelRemoveListener();
   }
 };
+
+// 切换巡逻模式
+const switchPatroling = () => {
+  if (state.patroling) {
+    patrolStore
+    notification.success({
+      placement: "topRight",
+      message: "开启巡逻模式",
+      duration: 3,
+    });
+  } else {
+    patrolStore.exitPatrol();
+  }
+}
 
 const confirmLabel = () => {
   console.log("confirm:", state.newLabelName);

@@ -43,6 +43,7 @@ import { useGlobalStore } from '@/stores/global'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useRtcClientStore } from '@/stores/rtcClient'
 import type P2PSocket from '@/utils/p2psocket'
+import Wifi from '@/components/Wifi.vue';
 
 const router = useRouter()
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
@@ -60,6 +61,10 @@ const menus: any[] = [
   {
     key: 'disconnect',
     text: '断开连接'
+  },
+  {
+    key: 'wifiConnect',
+    text: 'wifi配网连接'
   }
 ]
 
@@ -72,6 +77,8 @@ const handleMenuClick = ({ key }: { key: string }) => {
     case 'disconnect':
       handleDisconnect()
       break
+    case 'wifiConnect':
+      handleWifiConnext()
     default:
       break
   }
@@ -135,6 +142,15 @@ const handleDisconnect = () => {
   foxgloveClientStore.closeClient()
   rtcClientStore.closeRtcClient()
   globalStore.setConnected(false)
+}
+
+const handleWifiConnext = () => {
+  globalStore.openModal({
+    title: "配网",
+    type: "custom",
+    component: Wifi,
+    showFooter: false,
+  });
 }
 
 const onClickLogo = () => {

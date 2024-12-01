@@ -1,6 +1,7 @@
 import type {
   GridMap,
   MapInfo,
+  GridPlan,
   Quaternion,
   TopicListener,
   Transform,
@@ -13,6 +14,8 @@ import type { MessageData } from "@foxglove/ws-protocol";
 import _ from "lodash";
 import dict from "@/dict";
 import { useGlobalStore } from "@/stores/global";
+import { type PatrolPoint, usePatrolStore } from "@/stores/patrol";
+import { VirtualWall } from "@/utils/virtualWall";
 
 export default class DrawManage {
   panzoomIns: PanzoomObject | null = null;
@@ -22,6 +25,9 @@ export default class DrawManage {
   car: HTMLElement | null = null;
   pointsWrap: HTMLElement | null = null;
   labelWrap: HTMLElement | null = null;
+  patrolWrap: HTMLElement | null = null;
+  planCurveCanvas: HTMLCanvasElement | null = null;
+  vwDrawer: VirtualWall | null = null;
   scanPoints: HTMLElement[] = [];
   addingNav: boolean = false;
   navTranslation: {
@@ -57,11 +63,15 @@ export default class DrawManage {
   labelDisabled: boolean = false;
   laserFrame: string | null = null;
 
+  labels: any;
+
   globalStore: any = null;
+  patrolStore: any = null;
 
   constructor() {
     this.foxgloveClientStore = useFoxgloveClientStore();
     this.globalStore = useGlobalStore();
+    this.patrolStore = usePatrolStore();
     // 需要定义为箭头函数，避免this指向错误
     this.carPositionListener = _.throttle(
       ({ op, subscriptionId, timestamp, data }: MessageData) => {
@@ -197,6 +207,8 @@ export default class DrawManage {
       return;
     }
     console.log("get labels: ", labels);
+    this.patrolStore.initPoints();
+    this.labels = labels;
     labels.forEach((label: { label_name: string; pose: any }) => {
       if (!this.mapInfo || !this.imgWrap) return;
       const element = document.createElement("div");
@@ -232,6 +244,103 @@ export default class DrawManage {
       message.success("标签删除成功");
       this.drawLabel();
     }
+  }
+
+  // 轨迹曲线
+  drawCurve(data: GridPlan) {
+    if (!this.mapInfo || !this.imgWrap || !this.img) return;
+    if (!this.planCurveCanvas) {
+      this.planCurveCanvas = document.createElement("canvas");
+      this.planCurveCanvas.className = "plan-curve";
+      this.planCurveCanvas.innerHTML = "";
+      this.imgWrap.appendChild(this.planCurveCanvas);
+    }
+    this.planCurveCanvas.width = this.img.width;
+    this.planCurveCanvas.height = this.img.height;
+    const ctx = this.planCurveCanvas.getContext('2d');
+    const poses = data.poses;
+    if (!ctx || !poses) {
+      message.error("绘制轨迹曲线出错");
+      return;
+    }
+    if (poses.length === 0) return;
+    ctx.clearRect(0, 0, this.planCurveCanvas.width, this.planCurveCanvas.height);
+    ctx.beginPath();
+    // 消除偏差
+    const carStyle = this.car!.style;
+    const carX = Number(carStyle.left.slice(0, -2)) + Number(carStyle.width.slice(0, -2));
+    const carY = Number(carStyle.top.slice(0, -2)) + Number(carStyle.height.slice(0, -2));
+    let offsetX = 0, offsetY = 0;
+    poses.forEach((p, idx) => {
+      if (!this.mapInfo) return;
+      const { pose: { position } } = p;
+      const { x, y } = worldCoordinateToPixel(
+        position.x,
+        position.y,
+        this.scale,
+        this.mapInfo.resolution,
+        this.mapInfo.origin.position.x,
+        this.mapInfo.origin.position.y
+      );
+      if (idx === 0) {
+        offsetX = x - carX;
+        offsetY = y - carY;
+        ctx.moveTo(carX, carY);
+      }
+      else ctx.lineTo(x - offsetX, y - offsetY);
+    });
+    ctx.strokeStyle = 'blue';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    console.log(offsetX, offsetY);
+  }
+
+  // 巡航点交互与label分离
+  async drawPatrolPoints() {
+    if (!this.mapInfo || !this.imgWrap) return;
+    if (!this.patrolWrap) {
+      this.patrolWrap = document.createElement("div");
+      this.patrolWrap.className = "patrol-wrap";
+    }
+    console.log('drawPatrolPoints');
+    this.patrolWrap.innerHTML = "";
+    this.patrolWrap.style.backgroundColor = 'pink';
+    this.imgWrap.appendChild(this.patrolWrap);
+    const selectedSet: Set<string> = this.patrolStore.selectedSet;
+    this.labels.forEach((label: PatrolPoint) => {
+      if (!this.mapInfo || !this.imgWrap) return;
+      const element = document.createElement("div");
+      element.className = "nav-label";
+      const { x, y } = worldCoordinateToPixel(
+        label.pose.position.x,
+        label.pose.position.y,
+        this.scale,
+        this.mapInfo.resolution,
+        this.mapInfo.origin.position.x,
+        this.mapInfo.origin.position.y
+      );
+      element.innerHTML = label.label_name;
+      element.style.left = `${x}px`;
+      element.style.top = `${this.imgWrap.offsetHeight - y}px`;
+      element.addEventListener("mouseover", () => {
+        if (selectedSet.has(label.label_name)) element.style.borderColor = 'grey';
+        else element.style.borderColor = 'green';
+      });
+      element.addEventListener("mouseout", () => {
+        element.style.borderColor = '';
+      });
+      element.addEventListener("click", () => {
+        if (selectedSet.has(label.label_name)) return;
+        this.patrolStore.addPatrolPoint(label);
+      });
+      this.patrolWrap?.appendChild(element);
+    });
+  }
+
+  createVirtualWall() {
+    if (!this.vwDrawer) this.vwDrawer = new VirtualWall();
+    if (!this.imgWrap || !this.img) return;
+    this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height);
   }
 
   // 为画布添加缩放和平移拖拽功能
@@ -297,7 +406,7 @@ export default class DrawManage {
     this.img?.removeEventListener("mouseup", this.handleMouseup);
     this.img?.removeEventListener("mouseleave", this.handleMouseleave);
     this.img?.removeEventListener("wheel", this.panzoomIns!.zoomWithWheel);
-    if(this.labelWrap) this.labelWrap.style.pointerEvents = "auto";
+    if (this.labelWrap) this.labelWrap.style.pointerEvents = "auto";
     this.labelWrap?.removeEventListener("mousedown", this.handleMousedown);
     this.labelWrap?.removeEventListener("mouseup", this.handleMouseup);
   }
@@ -350,9 +459,8 @@ export default class DrawManage {
       let length = Math.round(Math.sqrt(deltaX * deltaX + deltaY * deltaY));
       length = length > 1 ? length : 1;
       const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
-      this.arrow.style.transform = `translate(-50%, -100%) rotate(${
-        angle + 90
-      }deg) scaleY(${length / 1}) scaleX(${length / 4})`;
+      this.arrow.style.transform = `translate(-50%, -100%) rotate(${angle + 90
+        }deg) scaleY(${length / 1}) scaleX(${length / 4})`;
     }
   };
 
@@ -792,22 +900,22 @@ const mapToBaseFootprint = (
   // 计算map到odom的偏航角
   const mapToOdomYaw = Math.atan2(
     2.0 *
-      (odomToMap.rotation.x * odomToMap.rotation.y +
-        odomToMap.rotation.z * odomToMap.rotation.w),
+    (odomToMap.rotation.x * odomToMap.rotation.y +
+      odomToMap.rotation.z * odomToMap.rotation.w),
     1.0 -
-      2.0 *
-        (odomToMap.rotation.y * odomToMap.rotation.y +
-          odomToMap.rotation.z * odomToMap.rotation.z)
+    2.0 *
+    (odomToMap.rotation.y * odomToMap.rotation.y +
+      odomToMap.rotation.z * odomToMap.rotation.z)
   );
   // 计算odom到base_footprint的偏航角
   const odomToBaseYaw = Math.atan2(
     2.0 *
-      (baseFootprintToOdom.rotation.x * baseFootprintToOdom.rotation.y +
-        baseFootprintToOdom.rotation.z * baseFootprintToOdom.rotation.w),
+    (baseFootprintToOdom.rotation.x * baseFootprintToOdom.rotation.y +
+      baseFootprintToOdom.rotation.z * baseFootprintToOdom.rotation.w),
     1.0 -
-      2.0 *
-        (baseFootprintToOdom.rotation.y * baseFootprintToOdom.rotation.y +
-          baseFootprintToOdom.rotation.z * baseFootprintToOdom.rotation.z)
+    2.0 *
+    (baseFootprintToOdom.rotation.y * baseFootprintToOdom.rotation.y +
+      baseFootprintToOdom.rotation.z * baseFootprintToOdom.rotation.z)
   );
   // 计算map到odom的旋转矩阵
   const cosMapToOdom = Math.cos(mapToOdomYaw);
