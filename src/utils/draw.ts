@@ -339,6 +339,7 @@ export default class DrawManage {
 
   createVirtualWall() {
     if (!this.vwDrawer) this.vwDrawer = new VirtualWall();
+    console.log('------', this.imgWrap, this.img);
     if (!this.imgWrap || !this.img) return;
     this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height);
   }

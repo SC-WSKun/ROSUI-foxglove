@@ -43,7 +43,6 @@
             <a-switch v-model:checked="state.patroling"></a-switch>巡逻模式
           </div>
           <a-button @click="patrolManage" type="primary" v-show="state.patroling">巡逻管理</a-button>
-          <a-button @click="createVirtualWall" type="primary">新增虚拟墙</a-button>
           <a-button @click="crossNav" type="primary">跨图导航</a-button>
           <a-button
             @click="pauseNav"
@@ -481,10 +480,6 @@ const patrolManage = () => {
     component: Patrol,
     showFooter: false,
   });
-}
-
-const createVirtualWall = () => {
-  state.drawManage.createVirtualWall();
 }
 
 // 跨图导航

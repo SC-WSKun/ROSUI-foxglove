@@ -12,6 +12,11 @@ export default [
     path: '/dashboard/navigation'
   },
   {
+    label: '绘制虚拟墙',
+    key: 'virtualWall',
+    path: '/dashboard/virtualWall'
+  },
+  {
     label: '地图管理',
     key: 'mapManagement',
     path: '/dashboard/mapManagement'
