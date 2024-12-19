@@ -31,7 +31,6 @@
         </div>
         <!-- 3. 导航 -->
         <div class="btn" v-if="state.curState === 3">
-          <JoyStick></JoyStick>
           <a-button @click="connectMap">连接地图</a-button>
           <div class="switch">
             <a-switch v-model:checked="state.navigating"></a-switch>导航模式
@@ -39,10 +38,10 @@
           <div class="switch">
             <a-switch v-model:checked="state.marking"></a-switch>标点模式
           </div>
-          <div class="switch">
-            <a-switch v-model:checked="state.patroling"></a-switch>巡逻模式
+          <div class="switch" v-show="state.marking">
+            <a-switch v-model:checked="patrolStore.patroling"></a-switch>巡逻模式
           </div>
-          <a-button @click="patrolManage" type="primary" v-show="state.patroling">巡逻管理</a-button>
+          <a-button @click="patrolManage" type="primary" v-show="patrolStore.patroling">巡逻管理</a-button>
           <a-button @click="crossNav" type="primary">跨图导航</a-button>
           <a-button
             @click="pauseNav"
@@ -74,6 +73,7 @@
           <a-button @click="confirmConnect" type="primary">确认连接</a-button>
           <a-button @click="cancelConnect">取消连接操作</a-button>
         </div>
+        <JoyStick v-if="globalStore.state.connected"></JoyStick>
       </a-card>
     </div>
     <a-modal
@@ -118,7 +118,6 @@ interface State {
   curState: number;
   navigating: boolean;
   marking: boolean;
-  patroling: boolean;
   crossing: boolean;
   candidateMap: Map | null;
   lastState: number;
@@ -139,7 +138,6 @@ const state = reactive<State>({
   curState: 0, // 当前状态step
   navigating: false, // 导航ing
   marking: false, // 标点ing
-  patroling: false, // 巡逻ing
   crossing: false, // 跨图导航ing
   candidateMap: null, // 选择的地图，未指定初始位姿
   lastState: 0, // 上一个状态，针对指定初始位姿的取消操作
@@ -188,11 +186,11 @@ watch(
 );
 
 watch(
-  () => state.patroling,
+  () => patrolStore.patroling,
   () => {
     switchPatroling();
-  }
-)
+  },
+);
 
 // 地图列表表格配置项
 const tableOptions: TableOptions = {
@@ -345,7 +343,6 @@ const subscribeMapTopic = () => {
       globalStore.setLoading(false);
     });
   }
-  subscribePlanTopic();
 };
 
 // 停止订阅map话题
@@ -353,7 +350,6 @@ const unSubscribeMapTopic = () => {
   foxgloveClientStore.stopListenMessage(mapMsgHandler);
   foxgloveClientStore.unSubscribeTopic(state.mapSubId);
   state.mapSubId = -1;
-  unSubscribePlanTopic();
 };
 
 // 地图消息监听回调
@@ -455,7 +451,6 @@ const planMsgHandler = ({
 const subscribePlanTopic = () => {
   globalStore.setLoading(true);
   foxgloveClientStore.subscribeTopic("/plan").then((res) => {
-    console.log('subscribePlanTopic', res);
     state.planSubId = res;
     foxgloveClientStore.listenMessage(planMsgHandler);
   }).finally(() => {
@@ -511,9 +506,11 @@ const switchNavigation = () => {
       }`,
       duration: 3,
     });
+    subscribePlanTopic();
   } else {
     state.drawManage.navRemoveListener();
     state.drawManage.pzAddListener();
+    unSubscribePlanTopic();
   }
 };
 
@@ -592,20 +589,21 @@ const switchMarking = () => {
     });
   } else {
     state.drawManage.labelRemoveListener();
+    patrolStore.patroling = false;
   }
 };
 
 // 切换巡逻模式
 const switchPatroling = () => {
-  if (state.patroling) {
-    patrolStore
+  if (patrolStore.patroling) {
+    patrolStore.openPatrol(state.drawManage);
     notification.success({
       placement: "topRight",
       message: "开启巡逻模式",
       duration: 3,
     });
   } else {
-    patrolStore.exitPatrol();
+    state.drawManage.exitPatrolMode();
   }
 }
 

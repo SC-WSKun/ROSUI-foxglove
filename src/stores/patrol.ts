@@ -2,6 +2,11 @@ import { defineStore } from 'pinia';
 import { message } from "ant-design-vue";
 import _ from 'lodash'
 import { ref, type Ref } from 'vue';
+import { useFoxgloveClientStore } from './foxgloveClient';
+import type { MessageData } from '@foxglove/ws-protocol';
+import type { Header, Stamp } from '@/typings';
+import { useGlobalStore } from './global';
+import type DrawManage from '@/utils/draw';
 
 export enum PatrolEvent {
 	EVENT1 = '事件1',
@@ -9,104 +14,146 @@ export enum PatrolEvent {
 	EVENT3 = '事件3',
 }
 
+export interface Pose {
+	position: {
+		x: number;
+		y: number;
+		z: number;
+	};
+	orientation: {
+		x: number;
+		y: number;
+		z: number;
+		w: number;
+	};
+}
+
 export interface PatrolPoint {
 	label_name: string;
-	pose: {
-		orientation: {
-			x: number;
-			y: number;
-			z: number;
-			w: number;
-		};
-		position: {
-			x: number;
-			y: number;
-			z: number;
-		};
-	};
+	pose: Pose;
 	events?: Array<PatrolEvent>;
+}
+
+export interface PatrolTopicMsg {
+	current_pose: {
+		header: Header
+		pose: Pose
+	}
+	navigation_time: Stamp
+	estimated_time_remaining: Stamp
+	number_of_recoveries: number
+	distance_remaining: number
+	number_of_poses_remaining: number
 }
 
 export const usePatrolStore = defineStore('patrol', () => {
 	const pointsSelected: Ref<PatrolPoint[]> = ref([]);
-	const selectedSet: Set<string> = new Set();
+	const patroling = ref(false);
+	const foxgloveClientStore = useFoxgloveClientStore();
+	const globalStore = useGlobalStore();
+	let drawManage: DrawManage | null = null;
+	let subId = -1;
 
-	// let i = 0;
-	// setInterval(() => {
-	//     addPatrolPoint({
-	//         label_name: `巡逻点${i++}`,
-	//         pose: {
-	//             orientation: {
-	//                 x: i,
-	//                 y: i,
-	//                 z: i,
-	//                 w: i,
-	//             },
-	//             position: {
-	//                 x: i,
-	//                 y: i,
-	//                 z: i,
-	//             }
-	//         },
-	//         events: [
-	//             PatrolEvent.EVENT1,
-	//             PatrolEvent.EVENT2,
-	//         ]
-	//     });
-	// }, 2000);
-
-	function initPoints() {
+	function openPatrol(dm: DrawManage) {
+		drawManage = dm;
 		pointsSelected.value = [];
+		globalStore.setLoading(true);
+		foxgloveClientStore.subscribeTopic('/nav2_extended/navigate_through_poses_topic').then((res) => {
+			console.log('subscribePatrolTopic', res);
+			subId = res;
+			foxgloveClientStore.listenMessage(patrolMsgHandler);
+		}).finally(() => {
+			globalStore.setLoading(false);
+		});
 	}
 
 	function addPatrolPoint(point: PatrolPoint) {
-		pointsSelected.value.push(point);
-		selectedSet.add(point.label_name);
-		message.error('添加巡逻点成功');
+		pointsSelected.value.push(_.cloneDeep(point));
+		message.success('添加巡逻点成功');
 	}
 
-	function delPatrolPoint(point: PatrolPoint) {
-		const idx = pointsSelected.value.findIndex(p => p.label_name === point.label_name);
+	function delPatrolPoint(idx: number) {
 		pointsSelected.value.splice(idx, 1);
-		selectedSet.delete(point.label_name);
-		message.error('删除巡逻点成功');
+		message.success('删除巡逻点成功');
 	}
 
-	function addEvent(point: PatrolPoint, event: PatrolEvent) {
-		const { label_name } = point;
-		const targetPoint = pointsSelected.value.find(p => p.label_name === label_name);
+	function addEvent(event: PatrolEvent, pointIdx: number) {
+		const targetPoint = pointsSelected.value[pointIdx];
 		if (!targetPoint) {
 			message.error('获取巡逻点失败');
-			return;
+			return false;
 		}
 		if (!targetPoint.events) targetPoint.events = [];
 		targetPoint.events.push(event);
-		message.error('添加事件成功');
+		message.success('添加事件成功');
+		return true;
 	}
 
-	function delEvent(point: PatrolPoint, eventIdx: number) {
-		const { label_name } = point;
-		const targetPoint = pointsSelected.value.find(p => p.label_name === label_name);
+	function delEvent(idx: number, eventIdx: number) {
+		const targetPoint = pointsSelected.value[idx];
 		if (!targetPoint) {
-			message.error('获取巡逻点失败');
+			message.error('事件删除失败');
 			return;
 		}
 		targetPoint.events?.splice(eventIdx, 1);
-		message.error('删除事件成功');
 	}
 
 	function exitPatrol() {
 		pointsSelected.value = [];
+    foxgloveClientStore.stopListenMessage(patrolMsgHandler);
+		foxgloveClientStore.unSubscribeTopic(subId);
+		subId = -1;
+	}
+
+	async function patrol() {
+		patroling.value = false;
+		const sec = Math.floor(Date.now() / 1000);
+		const nsec = (Date.now() / 1000) * 1000000;
+		const poses = pointsSelected.value.map(p => ({
+			header: {
+				frame_id: 'map',
+  			stamp: {
+					sec,
+					nsec,
+				}
+			},
+			pose: p.pose
+		}));
+		console.log('patrol start ---------------', poses);
+		const { result } = await foxgloveClientStore.callService(
+			'/nav2_extended/navigate_through_poses_service',
+			{
+				poses,
+			}
+		);
+		console.log('patrol result ---------------', result);
+	}
+
+	function patrolMsgHandler({
+		op,
+		subscriptionId,
+		timestamp,
+		data,
+	}: MessageData) {
+		if (subId === subscriptionId) {
+			const parseData = foxgloveClientStore.readMsgWithSubId(
+				subId,
+				data,
+			) as PatrolTopicMsg;
+			console.log('patrolMsgHandler', parseData);
+			drawManage?.patrolUpdateCarPose(parseData);
+		}
 	}
 
 	return {
-		initPoints,
+		openPatrol,
 		addPatrolPoint,
 		delPatrolPoint,
 		addEvent,
 		delEvent,
 		exitPatrol,
+		patrol,
 		pointsSelected,
-		selectedSet,
+		patroling,
 	}
 });

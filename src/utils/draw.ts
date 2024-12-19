@@ -14,7 +14,7 @@ import type { MessageData } from "@foxglove/ws-protocol";
 import _ from "lodash";
 import dict from "@/dict";
 import { useGlobalStore } from "@/stores/global";
-import { type PatrolPoint, usePatrolStore } from "@/stores/patrol";
+import { type PatrolPoint, type PatrolTopicMsg, usePatrolStore } from "@/stores/patrol";
 import { VirtualWall } from "@/utils/virtualWall";
 
 export default class DrawManage {
@@ -192,6 +192,7 @@ export default class DrawManage {
   }
 
   async drawLabel() {
+    console.log('label===========', this.mapInfo, this.imgWrap);
     if (!this.mapInfo || !this.imgWrap) return;
     if (!this.labelWrap) {
       this.labelWrap = document.createElement("div");
@@ -199,6 +200,11 @@ export default class DrawManage {
     }
     this.labelWrap.innerHTML = "";
     this.imgWrap.appendChild(this.labelWrap);
+    await this.updateLabels();
+  }
+
+  async updateLabels() {
+    if (!this.labelWrap) return;
     const { result, labels } = await this.foxgloveClientStore.callService(
       "/label_manager/get_labels"
     );
@@ -207,7 +213,6 @@ export default class DrawManage {
       return;
     }
     console.log("get labels: ", labels);
-    this.patrolStore.initPoints();
     this.labels = labels;
     labels.forEach((label: { label_name: string; pose: any }) => {
       if (!this.mapInfo || !this.imgWrap) return;
@@ -267,13 +272,13 @@ export default class DrawManage {
     ctx.clearRect(0, 0, this.planCurveCanvas.width, this.planCurveCanvas.height);
     ctx.beginPath();
     // 消除偏差
-    const carStyle = this.car!.style;
-    const carX = Number(carStyle.left.slice(0, -2)) + Number(carStyle.width.slice(0, -2));
-    const carY = Number(carStyle.top.slice(0, -2)) + Number(carStyle.height.slice(0, -2));
+    const carStyle = this.car?.style;
+    const carX = Number(carStyle?.left.slice(0, -2) ?? 0) + Number(this.car?.clientWidth ?? 0) / 2;
+    const carY = Number(carStyle?.top.slice(0, -2) ?? 0) + Number(this.car?.clientHeight ?? 0) / 2;
     let offsetX = 0, offsetY = 0;
-    poses.forEach((p, idx) => {
+    for (let idx = 0; idx < poses.length; idx++) {
       if (!this.mapInfo) return;
-      const { pose: { position } } = p;
+      const { pose: { position } } = poses[idx];
       const { x, y } = worldCoordinateToPixel(
         position.x,
         position.y,
@@ -286,13 +291,27 @@ export default class DrawManage {
         offsetX = x - carX;
         offsetY = y - carY;
         ctx.moveTo(carX, carY);
+        ctx.arc(carX, carY, 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'red';
+        ctx.fill();
       }
       else ctx.lineTo(x - offsetX, y - offsetY);
-    });
+    }
     ctx.strokeStyle = 'blue';
     ctx.lineWidth = 2;
     ctx.stroke();
-    console.log(offsetX, offsetY);
+  }
+
+  startPatrol() {
+    if (this.imgWrap && this.patrolWrap) this.imgWrap.removeChild(this.patrolWrap);
+    this.patrolWrap = null;
+    this.patrolStore?.patrol();
+  }
+
+  exitPatrolMode() {
+    if (this.imgWrap && this.patrolWrap) this.imgWrap.removeChild(this.patrolWrap);
+    this.patrolWrap = null;
+    this.patrolStore?.exitPatrol();
   }
 
   // 巡航点交互与label分离
@@ -302,11 +321,8 @@ export default class DrawManage {
       this.patrolWrap = document.createElement("div");
       this.patrolWrap.className = "patrol-wrap";
     }
-    console.log('drawPatrolPoints');
     this.patrolWrap.innerHTML = "";
-    this.patrolWrap.style.backgroundColor = 'pink';
     this.imgWrap.appendChild(this.patrolWrap);
-    const selectedSet: Set<string> = this.patrolStore.selectedSet;
     this.labels.forEach((label: PatrolPoint) => {
       if (!this.mapInfo || !this.imgWrap) return;
       const element = document.createElement("div");
@@ -322,15 +338,10 @@ export default class DrawManage {
       element.innerHTML = label.label_name;
       element.style.left = `${x}px`;
       element.style.top = `${this.imgWrap.offsetHeight - y}px`;
-      element.addEventListener("mouseover", () => {
-        if (selectedSet.has(label.label_name)) element.style.borderColor = 'grey';
-        else element.style.borderColor = 'green';
-      });
       element.addEventListener("mouseout", () => {
         element.style.borderColor = '';
       });
       element.addEventListener("click", () => {
-        if (selectedSet.has(label.label_name)) return;
         this.patrolStore.addPatrolPoint(label);
       });
       this.patrolWrap?.appendChild(element);
@@ -339,7 +350,6 @@ export default class DrawManage {
 
   createVirtualWall() {
     if (!this.vwDrawer) this.vwDrawer = new VirtualWall();
-    console.log('------', this.imgWrap, this.img);
     if (!this.imgWrap || !this.img) return;
     this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height);
   }
@@ -583,6 +593,13 @@ export default class DrawManage {
     if (this.pointsWrap) this.pointsWrap.innerHTML = "";
   }
 
+  // 巡逻模式更新小车坐标
+  patrolUpdateCarPose(parseData: PatrolTopicMsg) {
+    // todo 
+    // this.carPose = 
+    // this.updateCarPose();
+  }
+
   // 在地图上更新小车位置
   updateCarPose() {
     if (!this.carPose || !this.mapInfo || !this.imgWrap) return;
@@ -722,7 +739,8 @@ export default class DrawManage {
   labelRemoveListener() {
     this.labelWrap?.addEventListener("mousedown", this.labelHandleMousedown);
     this.labelWrap?.removeEventListener("mouseup", this.labelHandleMouseup);
-    if (this.labelWrap) this.labelWrap.innerHTML = "";
+    if (this.imgWrap && this.labelWrap) this.imgWrap.removeChild(this.labelWrap);
+    this.labelWrap = null;
   }
 
   // 添加导航箭头的鼠标事件监听

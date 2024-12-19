@@ -24,7 +24,8 @@ const nippleOptions: nipplejs.JoystickManagerOptions = {
   color: '#5964f8',
   mode: 'static',
   position: {
-    bottom: '120px',
+    // bottom: '120px',
+    bottom: '0px',
     right: '120px'
   },
   size: 150,

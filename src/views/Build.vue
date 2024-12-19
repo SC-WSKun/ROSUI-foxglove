@@ -19,7 +19,7 @@
       <a-card
         title="操作栏"
         :bordered="false"
-        style="width: 100%; height: 100%"
+        style="width: 100%; height: 100%;"
       >
         <!-- 建图前 -->
         <div class="btn" v-if="state.curState === 0">
@@ -70,7 +70,7 @@
             >结束建图</a-button
           >
         </div>
-        <JoyStick v-if="state.curState === 1"></JoyStick>
+        <JoyStick v-if="globalStore.state.connected"></JoyStick>
       </a-card>
     </div>
   </div>
