@@ -16,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import domainApi from '@/utils/domain-service'
 import { ref } from 'vue'
 enum Cert_Status {
     'Waiting',
@@ -32,12 +33,20 @@ const showBtnText = () => {
     return generateStatus.value === Cert_Status.Waiting || generateStatus.value === Cert_Status.Generated || generateStatus.value === Cert_Status.Downloaded
 }
 
+const createCert = () => {
+    console.log('start create cert')
+    domainApi.post('/robot').then(res => {
+        console.log('create robot success:', res)
+    })
+}
+
 const handleBtnClick = () => {
     console.log('click btn')
     switch (generateStatus.value) {
         case Cert_Status.Waiting:
             generateStatus.value = Cert_Status.Generating
             btnText.value = '生成证书中'
+            createCert()
             break;
         case Cert_Status.Generating:
             return;

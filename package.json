@@ -19,6 +19,7 @@
     "@types/ws": "^8.5.10",
     "@vueuse/motion": "^2.2.6",
     "ant-design-vue": "^4.0.8",
+    "axios": "^1.7.9",
     "defu": "^6.1.4",
     "less": "^4.2.0",
     "less-loader": "^11.1.4",
