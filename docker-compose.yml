@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: registry.cn-hangzhou.aliyuncs.com/b3351/foxglove-ui:latest
+    image: registry.cn-guangzhou.aliyuncs.com/weishuokun/foxglove-ui:latest
     ports:
       - "4451:4451"
     restart: always

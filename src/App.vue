@@ -24,6 +24,7 @@ import { useGlobalStore } from './stores/global'
 import { nextTick, onBeforeUnmount, onMounted, ref, type Ref } from 'vue'
 import { useRtcClientStore } from './stores/rtcClient'
 
+
 const globalStore = useGlobalStore()
 const rtcClientStore = useRtcClientStore()
 

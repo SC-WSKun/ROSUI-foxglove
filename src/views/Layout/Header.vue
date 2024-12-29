@@ -44,6 +44,7 @@ import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useRtcClientStore } from '@/stores/rtcClient'
 import type P2PSocket from '@/utils/p2psocket'
 import Wifi from '@/components/Wifi.vue';
+import CreateRobot from '@/components/CreateRobot.vue'
 
 const router = useRouter()
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
@@ -65,9 +66,12 @@ const menus: any[] = [
   {
     key: 'wifiConnect',
     text: 'wifi配网连接'
+  },
+  {
+    key: 'create',
+    text: '创建机器人'
   }
 ]
-
 // 处理菜单点击事件
 const handleMenuClick = ({ key }: { key: string }) => {
   switch (key) {
@@ -79,6 +83,10 @@ const handleMenuClick = ({ key }: { key: string }) => {
       break
     case 'wifiConnect':
       handleWifiConnext()
+      break;
+    case 'create':
+      handleCreateRobot()
+      break;
     default:
       break
   }
@@ -149,6 +157,15 @@ const handleWifiConnext = () => {
     title: "配网",
     type: "custom",
     component: Wifi,
+    showFooter: false,
+  });
+}
+
+const handleCreateRobot = () => {
+  globalStore.openModal({
+    title: "创建机器人",
+    type: "custom",
+    component: CreateRobot,
     showFooter: false,
   });
 }
