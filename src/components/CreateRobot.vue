@@ -17,7 +17,8 @@
 
 <script setup lang="ts">
 import domainApi from '@/utils/domain-service'
-import { ref } from 'vue'
+import { message } from 'ant-design-vue'
+import { watch, ref } from 'vue'
 enum Cert_Status {
     'Waiting',
     'Generating',
@@ -28,30 +29,75 @@ enum Cert_Status {
 }
 const btnText = ref('开始创建')
 const generateStatus = ref(Cert_Status.Waiting)
+const certPath = ref('')
+watch(generateStatus, (newValue) => {
+    switch (newValue) {
+        case Cert_Status.Waiting:
+            btnText.value = '开始创建'
+            break;
+        case Cert_Status.Generated:
+            btnText.value = '下载证书'
+            break;
+        case Cert_Status.Downloaded:
+            btnText.value = '下载完成'
+            break;
+    }
+})
 
+/**
+ * 是否显示按钮文字
+ */
 const showBtnText = () => {
     return generateStatus.value === Cert_Status.Waiting || generateStatus.value === Cert_Status.Generated || generateStatus.value === Cert_Status.Downloaded
 }
 
+/**
+ * 创建机器人证书
+ */
 const createCert = () => {
-    console.log('start create cert')
-    domainApi.post('/robot').then(res => {
-        console.log('create robot success:', res)
+    domainApi.post('/robot').then((res: any) => {
+        if (res.code === 0) {
+            generateStatus.value = Cert_Status.Generated
+            certPath.value = res.certPath
+        } else {
+            generateStatus.value = Cert_Status.Error
+            throw Error(res)
+        }
+    }).catch((error: any) => {
+        console.error(error)
+        message.error('创建机器人证书失败')
+    })
+}
+
+/**
+ * 下载机器人证书
+ */
+const downloadCert = () => {
+    console.log('start download cert:', certPath.value)
+    domainApi.get(`/robot/ssl?certPath=${certPath.value}`, { responseType: 'blob' }).then(res => {
+        console.log('download cert', res)
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'robot.zip'); // 设置下载的文件名
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        generateStatus.value = Cert_Status.Downloaded
     })
 }
 
 const handleBtnClick = () => {
-    console.log('click btn')
     switch (generateStatus.value) {
         case Cert_Status.Waiting:
             generateStatus.value = Cert_Status.Generating
-            btnText.value = '生成证书中'
             createCert()
             break;
         case Cert_Status.Generating:
             return;
         case Cert_Status.Generated:
             generateStatus.value = Cert_Status.Downloading
+            downloadCert()
             break;
         case Cert_Status.Downloading:
             return;
