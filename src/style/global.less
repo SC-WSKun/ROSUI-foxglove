@@ -154,3 +154,32 @@
   overflow: hidden;
   z-index: 11;
 }
+
+.interactive-point-wrap {
+  position: relative;
+  z-index: 12;
+
+  div {
+    box-sizing: border-box;
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    margin-left: -2px;
+    margin-top: -2px;
+    border: 2px solid orange;
+    border-radius: 50%;
+    overflow: hidden;
+    font-size: 8px;
+    text-align: center;
+    line-height: 20px;
+    color: blue;
+    transition: 0.2s linear;
+    &:hover {
+      width: 24px;
+      height: 24px;
+      margin-left: -12px;
+      margin-top: -12px;
+      border: 2px solid red;
+    }
+  }
+}

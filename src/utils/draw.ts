@@ -350,8 +350,8 @@ export default class DrawManage {
 
   createVirtualWall() {
     if (!this.vwDrawer) this.vwDrawer = new VirtualWall();
-    if (!this.imgWrap || !this.img) return;
-    this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height);
+    if (!this.imgWrap || !this.img || !this.mapInfo) return;
+    this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height, this.mapInfo, this.scale);
   }
 
   // 为画布添加缩放和平移拖拽功能
@@ -595,9 +595,7 @@ export default class DrawManage {
 
   // 巡逻模式更新小车坐标
   patrolUpdateCarPose(parseData: PatrolTopicMsg) {
-    // todo 
-    // this.carPose = 
-    // this.updateCarPose();
+    
   }
 
   // 在地图上更新小车位置
@@ -868,7 +866,7 @@ const pixelToWorldCoordinate = (
 };
 
 // 真实世界坐标转像素坐标
-const worldCoordinateToPixel = (
+export const worldCoordinateToPixel = (
   worldX: number,
   worldY: number,
   scale: number,

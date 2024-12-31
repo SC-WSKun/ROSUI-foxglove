@@ -2,6 +2,7 @@
   <div class="virtualWall">
     <div class="view" id="virtualWallMap">
       <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
+      <VirtualWallCom :drawManage="state.drawManage" :isWatching="false"/>
     </div>
     <div class="config">
       <a-card
@@ -15,9 +16,15 @@
         </div>
         <!-- 1. 地图选择完成 -->
         <div class="btn" v-if="state.curState === 1">
-          <a-button @click="confirmVW" type="primary">确认</a-button>
-          <a-button @click="revokeVW" type="default" @disabled="state.drawManage.vwDrawer?.revokeDisable">撤销</a-button>
-          <a-button @click="clearVW" type="primary" danger>清除</a-button>
+          <a-button @click="changeMode" type="primary">
+            {{ state.mode === Mode.DRAW ? '删除模式' : '绘制模式' }}
+          </a-button>
+          <template v-if="state.mode === Mode.DRAW">
+            <a-button @click="confirmVW" type="primary">确认</a-button>
+            <a-button @click="revokeVW" type="default">撤销</a-button>
+            <a-button @click="clearVW" type="primary" danger>清除</a-button>
+          </template>
+          <p v-else>点击虚拟墙交互点进行删除</p>
         </div>
       </a-card>
     </div>
@@ -27,13 +34,14 @@
 <script setup lang="ts">
 import { useFoxgloveClientStore } from "@/stores/foxgloveClient";
 import { useGlobalStore } from "@/stores/global";
-import { onBeforeUnmount, onMounted, reactive, watch } from "vue";
+import { onBeforeUnmount, reactive, watch } from "vue";
 import { type GridMap, type Map } from "@/typings";
 import type { TableOptions } from "@/typings/component";
 import type { MessageData } from "@foxglove/ws-protocol";
 import DrawManage from "@/utils/draw";
-import { VirtualWall } from "@/utils/virtualWall";
 import { message } from "ant-design-vue";
+import VirtualWallCom from "@/components/VirtualWallCom.vue";
+import { Mode } from "@/utils/virtualWall";
 
 interface State {
   maps: Map[];
@@ -42,6 +50,7 @@ interface State {
   drawManage: DrawManage;
   connecting: boolean;
   curState: number;
+  mode: Mode;
 }
 
 const foxgloveClientStore = useFoxgloveClientStore();
@@ -54,6 +63,7 @@ const state = reactive<State>({
   drawManage: new DrawManage(),
   connecting: false, // 连接地图ing
   curState: 0, // 当前状态step
+  mode: 0, // 当前模式
 });
 
 const STATE_MAP = {
@@ -187,7 +197,7 @@ const selectMap = () => {
 
 // 完成虚拟墙绘制
 const confirmVW = () => {
-  
+  state.drawManage.vwDrawer?.addVW();
 }
 
 // 撤销上一步绘制
@@ -198,6 +208,12 @@ const revokeVW = () => {
 // 清除虚拟墙绘制
 const clearVW = () => {
   state.drawManage.vwDrawer?.clear();
+}
+
+function changeMode() {
+  if (state.mode === Mode.DRAW) state.mode = Mode.DELETE;
+  else state.mode = Mode.DRAW;
+  state.drawManage.vwDrawer?.changeMode(state.mode);
 }
 
 onBeforeUnmount(() => {

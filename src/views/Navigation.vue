@@ -2,6 +2,7 @@
   <div class="navigation">
     <div class="view" id="navigationMap">
       <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
+      <VirtualWallCom :drawManage="state.drawManage" :isWatching="true"/>
     </div>
     <div class="config">
       <a-card
@@ -107,6 +108,7 @@ import type { MessageData } from "@foxglove/ws-protocol";
 import DrawManage from "@/utils/draw";
 import { message, notification } from "ant-design-vue";
 import Patrol from "@/components/Patrol.vue";
+import VirtualWallCom from "@/components/VirtualWallCom.vue";
 
 interface State {
   maps: Map[];
