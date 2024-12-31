@@ -3,7 +3,7 @@
         <div v-motion :initial="{ scale: 1 }" :hovered="{ scale: 1.1 }" :tapped="{ scale: 0.9 }" class="btn create-btn"
             @click="handleBtnClick">
             <p v-if="showBtnText()">{{ btnText
-            }}</p>
+                }}</p>
             <div v-else class="loading-box">
                 <div class="loading three-balls-bounce">
                     <div class="circle"></div>
@@ -74,16 +74,17 @@ const createCert = () => {
  */
 const downloadCert = () => {
     console.log('start download cert:', certPath.value)
-    domainApi.get(`/robot/ssl?certPath=${certPath.value}`, { responseType: 'blob' }).then(res => {
-        console.log('download cert', res)
-        const url = window.URL.createObjectURL(new Blob([res.data]));
+    domainApi.get(`/robot/ssl?certPath=${certPath.value}`, { headers: { 'Content-Type': 'application/json; application/octet-stream' }, responseType: 'blob' }).then(res => {
+        const url = window.URL.createObjectURL(res)
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', 'robot.zip'); // 设置下载的文件名
+        link.setAttribute('download', 'robot.zip');
         document.body.appendChild(link);
         link.click();
-        link.remove();
-        generateStatus.value = Cert_Status.Downloaded
+        window.URL.revokeObjectURL(url);
+    }).catch(error => {
+        console.error(error)
+        message.error('下载机器人证书失败')
     })
 }
 
