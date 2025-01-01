@@ -1,0 +1,114 @@
+<template>
+	<div>
+		<div class="top-btns">
+			<a-button type="primary" @click="addPatrolPoint">添加巡逻点</a-button>
+			<a-button type="primary" @click="startPatrol">开始巡逻</a-button>
+		</div>
+		<ul class="patrol-list">
+			<li v-for="(point, idx) in pointsSelected" :key="idx">
+				<div  style="display: flex; justify-content: space-between;">
+					<span>{{ point.label_name }}</span>
+					<div>
+						<span class="del-btn" @click="delPatrolPoint(idx)">x</span>
+						<a-button @click="openAddEventModal(idx)">添加事件</a-button>
+					</div>
+				</div>
+				<div>
+					<a-tag
+						v-for="(event, eIdx) in point?.events"
+						:key="eIdx"
+						closable
+						@close.prevent="delEvent(idx, eIdx)"
+					>
+						{{ event }}
+					</a-tag>
+				</div>
+			</li>
+		</ul>
+		<a-modal v-model:open="showEventsModal" title="Basic Modal" @ok="confirmAddEvent">
+      <a-select
+    	  ref="select"
+    	  v-model:value="selectedEvent"
+    	  style="width: 120px"
+    	>
+    	  <a-select-option v-for="(event, idx) in PatrolEvent" :key="idx">{{ event }}</a-select-option>
+    	</a-select>
+    </a-modal>
+	</div>
+</template>
+
+<script setup lang="ts">
+import { useGlobalStore } from '@/stores/global';
+import { usePatrolStore, PatrolEvent } from '@/stores/patrol';
+import DrawManage from '@/utils/draw';
+import { message } from 'ant-design-vue';
+import { ref } from 'vue';
+
+const globalStore = useGlobalStore();
+const { pointsSelected, delPatrolPoint, addEvent, delEvent } = usePatrolStore();
+const showEventsModal = ref(false);
+const pointIdx = ref(-1);
+const selectedEvent = ref(PatrolEvent.EVENT1);
+
+const props = defineProps<{
+	props: {
+		drawManage: DrawManage,
+	}
+}>();
+
+const addPatrolPoint = () => {
+	props.props.drawManage.drawPatrolPoints();
+	globalStore.closeModal();
+	message.info('请在地图上选择巡逻点');
+}
+
+const openAddEventModal = (idx: number) => {
+	showEventsModal.value = true;
+	pointIdx.value = idx;
+}
+
+const confirmAddEvent = () => {
+	showEventsModal.value = !addEvent(selectedEvent.value, pointIdx.value);
+}
+
+const startPatrol = () => {
+	if (pointsSelected.length === 0) return message.info('请先选择巡逻点');
+	globalStore.closeModal();
+	message.success('巡逻中...');
+	props.props.drawManage.startPatrol();
+}
+</script>
+
+<style lang="less" scoped>
+.top-btns {
+	display: flex;
+	justify-content: space-between;
+}
+
+.patrol-list {
+	max-height: 400px;
+	overflow-y: auto;
+	& > li {
+		padding: 5px 0;
+	}
+}
+
+.del-btn {
+	cursor: pointer;
+	display: inline-block;
+	color: #fff;
+	width: 20px;
+	height: 20px;
+	text-align: center;
+	line-height: 18px;
+	border-radius: 50%;
+	background-color: red;
+	flex-shrink: 0;
+	transition: 0.2s linear;
+	margin-right: 10px;
+	&:hover {
+		transform: scale(1.2);
+	}
+}
+</style>
+  

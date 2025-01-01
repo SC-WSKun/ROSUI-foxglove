@@ -58,6 +58,34 @@ export interface MapInfo {
   }
 }
 
+export interface Stamp {
+	nesc: number
+	sec: number
+}
+
+export interface Header {
+  frame_id: string
+  stamp: Stamp
+}
+
+export interface GridPlan {
+  data: Uint8Array
+  header: Header
+  poses: PlanPose[]
+}
+
+export interface PlanPose {
+  header: Header
+  pose: {
+    position: {
+      x: number
+      y: number
+      z: number
+    },
+    orientation: Quaternion
+  }
+}
+
 export type Quaternion = {
   w: number
   x: number
