@@ -2,7 +2,7 @@
   <div class="navigation">
     <div class="view" id="navigationMap">
       <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
-      <VirtualWallCom :drawManage="state.drawManage" :isWatching="true"/>
+      <VirtualWallCom v-if="state.curState > 0" :drawManage="state.drawManage" :isWatching="true"/>
     </div>
     <div class="config">
       <a-card

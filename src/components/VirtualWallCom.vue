@@ -7,7 +7,7 @@ import { useVirtualWallStore } from '@/stores/virtualWall';
 import type { IVirtualWall } from '@/stores/virtualWall';
 import { worldCoordinateToPixel } from '@/utils/draw';
 import DrawManage from '@/utils/draw';
-import { watch } from 'vue';
+import { onMounted, watch } from 'vue';
 
 // 此组件单纯用于导航地图展示虚拟墙
 // 虚拟墙绘制、删除操作在view/VirtualWall
@@ -24,20 +24,19 @@ const virtualWallStore = useVirtualWallStore();
 let vwContainer = document.getElementById('vwContainer');
 let canvas: HTMLCanvasElement | null = null;
 
-watch(
-  () => drawManage.mapInfo,
-  () => {
-    // 编辑态不更新
-    if (!drawManage.img || canvas && !isWatching) return;
-    drawVWs(drawManage.img!.width, drawManage.img!.height);
-  }
-)
+onMounted(() => {
+  // 编辑态不更新
+  // if (!drawManage.img || canvas && !isWatching) return;
+  virtualWallStore.getVWs();
+  drawVWs(drawManage.img!.width, drawManage.img!.height);
+})
 
 watch(
   () => virtualWallStore.virtualWalls,
   () => {
     // 非编辑态不更新
     if (isWatching) return;
+    virtualWallStore.getVWs();
     drawVWs(drawManage.img!.width, drawManage.img!.height);
   }
 )
@@ -57,7 +56,6 @@ function drawVWs(canvasWidth: number, canvasHeight: number) {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, 1000, 1000);
   ctx.beginPath();
-  virtualWallStore.getVWs();
   console.log('drawVWs--------------------', virtualWallStore.virtualWalls);
   virtualWallStore.virtualWalls.forEach((wall: IVirtualWall) => {
     if (!drawManage?.mapInfo) return;
@@ -81,7 +79,7 @@ function drawVWs(canvasWidth: number, canvasHeight: number) {
     ctx.lineTo(x1, y1);
     console.log(x0, y0, x1, y1);
   });
-  ctx.strokeStyle = 'orange';
+  ctx.strokeStyle = 'skyblue';
   ctx.lineWidth = 2;
   ctx.stroke();
 }

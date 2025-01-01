@@ -94,7 +94,7 @@ export class VirtualWall {
     y1: number
   ) {
     ctx.beginPath();
-    ctx.strokeStyle = "orange";
+    ctx.strokeStyle = "skyblue";
     ctx.lineWidth = 2;
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
