@@ -57,7 +57,7 @@ const showBtnText = () => {
  * 创建机器人证书
  */
 const createCert = () => {
-    domainApi.post('/robot').then((res: any) => {
+    domainApi.post('/robot',{robot_name: robotName.value}).then((res: any) => {
         if (res.code === 0) {
             generateStatus.value = Cert_Status.Generated
             certPath.value = res.certPath
@@ -81,7 +81,7 @@ const downloadCert = () => {
         const url = window.URL.createObjectURL(res)
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', 'robot.zip');
+        link.setAttribute('download', `${robotName.value}.zip`);
         document.body.appendChild(link);
         link.click();
         window.URL.revokeObjectURL(url);
