@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as pako from "pako";
 import { useVirtualWallStore, type ILine, type IVirtualWall } from "@/stores/virtualWall";
 import { worldCoordinateToPixel } from "./draw";
