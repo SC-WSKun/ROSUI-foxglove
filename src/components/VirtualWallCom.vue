@@ -36,7 +36,6 @@ watch(
   () => {
     // 非编辑态不更新
     if (isWatching) return;
-    virtualWallStore.getVWs();
     drawVWs(drawManage.img!.width, drawManage.img!.height);
   }
 )
