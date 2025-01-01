@@ -11,15 +11,10 @@
           <DownOutlined :style="{ fontSize: '12px' }" />
         </a>
         <template #overlay>
-          <a-empty
-            v-if="!menus.length"
-            :image="emptyImage"
-            description="no data"
-            :image-style="{
-              margin: '30px 40px',
-              marginBottom: '10px'
-            }"
-          ></a-empty>
+          <a-empty v-if="!menus.length" :image="emptyImage" description="no data" :image-style="{
+            margin: '30px 40px',
+            marginBottom: '10px'
+          }"></a-empty>
           <a-menu @click="handleMenuClick" v-else>
             <a-menu-item v-for="item in menus" :key="item.key">
               <span>{{ item.text }}</span>
@@ -52,7 +47,7 @@ const globalStore = useGlobalStore()
 const foxgloveClientStore = useFoxgloveClientStore()
 const rtcClientStore = useRtcClientStore()
 
-let connectTimer: number | null = null
+let connectTimer: NodeJS.Timeout | null = null
 
 const menus: any[] = [
   {
@@ -122,7 +117,8 @@ const handleConnect = () => {
         connectTimer = setInterval(() => {
           const end = new Date().getTime()
           if (end - start > 1000 * 30) {
-            clearInterval(connectTimer as number)
+            if (connectTimer)
+              clearInterval(connectTimer)
             connectTimer = null
             globalStore.setLoading(false)
             rtcClientStore.closeRtcClient()
@@ -130,7 +126,7 @@ const handleConnect = () => {
           }
         })
         const socket: P2PSocket = await rtcClientStore.initRtcClient(record.id)
-        clearInterval(connectTimer as number)
+        clearInterval(connectTimer)
         connectTimer = null
         foxgloveClientStore.initClient(socket)
         globalStore.setLoading(false)

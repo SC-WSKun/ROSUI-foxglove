@@ -29,7 +29,7 @@ const globalStore = useGlobalStore()
 const rtcClientStore = useRtcClientStore()
 
 const modalRef: any = ref(null)
-let timer: number | null = null
+let timer: NodeJS.Timeout | null = null
 
 onMounted(() => {
   timer = setInterval(() => {

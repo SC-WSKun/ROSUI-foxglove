@@ -74,7 +74,7 @@ const createCert = () => {
  */
 const downloadCert = () => {
     console.log('start download cert:', certPath.value)
-    domainApi.get(`/robot/ssl?certPath=${certPath.value}`, { headers: { 'Content-Type': 'application/json; application/octet-stream' }, responseType: 'blob' }).then(res => {
+    domainApi.get(`/robot/ssl?certPath=${certPath.value}`, { headers: { 'Content-Type': 'application/json; application/octet-stream' }, responseType: 'blob' }).then((res: any) => {
         const url = window.URL.createObjectURL(res)
         const link = document.createElement('a');
         link.href = url;

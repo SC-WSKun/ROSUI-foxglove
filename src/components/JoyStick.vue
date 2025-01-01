@@ -12,7 +12,7 @@ interface State {
   manager: nipplejs.JoystickManager | null
   linearSpeed: number
   angularSpeed: number
-  timer: number | undefined
+  timer: NodeJS.Timeout | undefined
   subId: number | undefined
   channelId: number | undefined
   stickActive: boolean

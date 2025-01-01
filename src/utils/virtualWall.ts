@@ -5,7 +5,7 @@ const MOUSE_LEFT_BUTTON = 0;
 export class VirtualWall {
   canvas: HTMLCanvasElement | null = null;
   isDrawing = false;
-  revokeHistory: Uint8Array<ArrayBufferLike>[] = [];
+  revokeHistory: Uint8Array[] = [];
   revokeDisable = false;
   x = 0;
   y = 0;
@@ -21,18 +21,22 @@ export class VirtualWall {
     this.canvas.width = width;
     this.canvas.height = height;
   }
-  
+
   handleDraw() {
     if (!this.canvas) return;
-    const ctx = this.canvas.getContext('2d')!;
+    const ctx = this.canvas.getContext("2d")!;
     ctx.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
-    
 
-    this.canvas.addEventListener('mousedown', (event) => {
+    this.canvas.addEventListener("mousedown", (event) => {
       if (!this.canvas || event.button !== MOUSE_LEFT_BUTTON) return;
-      
+
       // 存储压缩数据
-      const imageDate = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      const imageDate = ctx.getImageData(
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
       const compressed = pako.deflate(new Uint8Array(imageDate.data));
       this.revokeHistory.push(compressed);
       this.revokeDisable = false;
@@ -42,7 +46,7 @@ export class VirtualWall {
       this.isDrawing = true;
     });
 
-    this.canvas?.addEventListener('mousemove', (event) => {
+    this.canvas?.addEventListener("mousemove", (event) => {
       if (event.button !== MOUSE_LEFT_BUTTON) return;
       if (this.isDrawing) {
         this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
@@ -51,7 +55,7 @@ export class VirtualWall {
       }
     });
 
-    this.canvas?.addEventListener('mouseup', (event) => {
+    this.canvas?.addEventListener("mouseup", (event) => {
       if (event.button !== MOUSE_LEFT_BUTTON) return;
       if (this.isDrawing) {
         this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
@@ -62,9 +66,15 @@ export class VirtualWall {
     });
   }
 
-  drawLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) {
+  drawLine(
+    ctx: CanvasRenderingContext2D,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number
+  ) {
     ctx.beginPath();
-    ctx.strokeStyle = 'orange';
+    ctx.strokeStyle = "orange";
     ctx.lineWidth = 2;
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
@@ -77,8 +87,12 @@ export class VirtualWall {
     try {
       const decompressed = pako.inflate(compressed);
       const unit8ClampedArray = new Uint8ClampedArray(decompressed);
-      const imgData = new ImageData(unit8ClampedArray, this.canvas.width, this.canvas.height);
-      const ctx = this.canvas.getContext('2d');
+      const imgData = new ImageData(
+        unit8ClampedArray,
+        this.canvas.width,
+        this.canvas.height
+      );
+      const ctx = this.canvas.getContext("2d");
       ctx?.putImageData(imgData, 0, 0);
     } catch (err) {
       console.error(err);
@@ -88,7 +102,7 @@ export class VirtualWall {
 
   clear() {
     if (!this.canvas) return;
-    const ctx = this.canvas.getContext('2d')!;
+    const ctx = this.canvas.getContext("2d")!;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 }
