@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as pako from "pako";
 import { useVirtualWallStore, type ILine, type IVirtualWall } from "@/stores/virtualWall";
-import { worldCoordinateToPixel } from "./draw";
+import { worldCoordinateToPixel, pixelToWorldCoordinate } from "./draw";
 import type { MapInfo } from "@/typings";
 import { message } from "ant-design-vue";
 
@@ -28,6 +28,8 @@ export class VirtualWall {
   // moudeDown位置
   startX = 0;
   startY = 0;
+  scale:number = 1;
+  mapInfo: MapInfo | null = null;
 
   create(parentNode: HTMLElement, width: number, height: number, mapInfo: MapInfo, scale: number) {
     if (!this.canvas) {
@@ -40,6 +42,8 @@ export class VirtualWall {
     }
     this.canvas.width = width;
     this.canvas.height = height;
+    this.scale = scale;
+    this.mapInfo = mapInfo;
 
     // 虚拟墙交互点
     this.drawInteractivePoint(mapInfo, scale);
@@ -191,8 +195,31 @@ export class VirtualWall {
   }
 
   async addVW() {
-    console.log('addVW params', this.lines);
-    const { result, wallIds } = await virtualWallStore.addVW(this.lines);
+    if (!this.mapInfo) return;
+    const walls = this.lines.map(line => {
+      const { x: x0, y: y0 } = pixelToWorldCoordinate(
+        line.x0,
+        line.y0,
+        this.scale,
+        this.mapInfo.resolution,
+        this.mapInfo.origin.position.x,
+        this.mapInfo.origin.position.y,
+        this.mapInfo.height
+      );
+      const { x: x1, y: y1 } = pixelToWorldCoordinate(
+        line.x1,
+        line.y1,
+        this.scale,
+        this.mapInfo.resolution,
+        this.mapInfo.origin.position.x,
+        this.mapInfo.origin.position.y,
+        this.mapInfo.height
+      );
+      return {x0, x1, y0, y1};
+    });
+    console.log('addVW lines', this.lines);
+    console.log('addVW 转换真实世界坐标的 lines', walls);
+    const { result, wallIds } = await virtualWallStore.addVW(walls);
     if (!result) message.error('添加虚拟墙失败');
     console.log('addVW res', result, wallIds);
   }
