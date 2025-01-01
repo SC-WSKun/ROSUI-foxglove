@@ -31,7 +31,6 @@ enum Cert_Status {
 const btnText = ref('开始创建')
 const robotName = ref('')
 const generateStatus = ref(Cert_Status.Waiting)
-const certPath = ref('')
 watch(generateStatus, (newValue) => {
     switch (newValue) {
         case Cert_Status.Waiting:
@@ -60,7 +59,6 @@ const createCert = () => {
     domainApi.post('/robot',{robot_name: robotName.value}).then((res: any) => {
         if (res.code === 0) {
             generateStatus.value = Cert_Status.Generated
-            certPath.value = res.certPath
             message.success('创建机器人证书成功')
         } else {
             generateStatus.value = Cert_Status.Error
@@ -75,9 +73,9 @@ const createCert = () => {
 /**
  * 下载机器人证书
  */
-const downloadCert = () => {
-    console.log('start download cert:', certPath.value)
-    domainApi.get(`/robot/ssl?certPath=${certPath.value}`, { headers: { 'Content-Type': 'application/json; application/octet-stream' }, responseType: 'blob' }).then((res: any) => {
+const downloadCert = (robot_name: string) => {
+    console.log('robotName:',robot_name)
+    domainApi.get(`/robot/ssl?robotname=${robot_name}`, { headers: { 'Content-Type': 'application/json; application/octet-stream' }, responseType: 'blob' }).then((res: any) => {
         const url = window.URL.createObjectURL(res)
         const link = document.createElement('a');
         link.href = url;
@@ -102,7 +100,7 @@ const handleBtnClick = () => {
             return;
         case Cert_Status.Generated:
             generateStatus.value = Cert_Status.Downloading
-            downloadCert()
+            downloadCert(robotName.value)
             break;
         case Cert_Status.Downloading:
             return;
