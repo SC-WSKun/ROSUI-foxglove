@@ -16,9 +16,11 @@
         </div>
         <!-- 1. 地图选择完成 -->
         <div class="btn" v-if="state.curState === 1">
-          <a-button @click="changeMode" type="primary">
-            {{ state.mode === Mode.DRAW ? '删除模式' : '绘制模式' }}
-          </a-button>
+          <div style="width: 100%; display: flex; justify-content: space-around;">
+            <a-button @click="changeMode" type="primary">
+              {{ state.mode === Mode.DRAW ? '删除模式' : '绘制模式' }}
+            </a-button>
+          </div>
           <template v-if="state.mode === Mode.DRAW">
             <a-button @click="confirmVW" type="primary">确认</a-button>
             <a-button @click="revokeVW" type="default">撤销</a-button>

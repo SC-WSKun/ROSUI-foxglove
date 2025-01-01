@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia';
-import { message } from "ant-design-vue";
 import _ from 'lodash'
 import { ref, type Ref } from 'vue';
 import { useFoxgloveClientStore } from './foxgloveClient';
@@ -28,22 +27,17 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 		virtualWalls.value = walls;
 	}
 
-	async function addVW(data: ILine | ILine[]) {
-		let serviceName = '/global_costmap/global_costmap/add_virtual_wall';
-		if (Array.isArray(data)) serviceName = '/global_costmap/global_costmap/add_virtual_walls';
-		
+	async function addVW(walls: ILine[]) {
 		const res = await foxgloveClientStore.callService(
-			serviceName,
-			{data},
+			'/global_costmap/global_costmap/add_virtual_walls',
+			{
+				walls,
+			},
 		);
-		let wallIds = [];
-		if (Array.isArray(data)) wallIds = [...res.wall_ids];
-		else wallIds = [res.wall_id];
-
 		getVWs();
 		return {
 			result: res.result,
-			wallIds,
+			wallIds: [...res.wall_ids],
 		}
 	}
 

@@ -191,8 +191,9 @@ export class VirtualWall {
   }
 
   async addVW() {
+    console.log('addVW params', this.lines);
     const { result, wallIds } = await virtualWallStore.addVW(this.lines);
     if (!result) message.error('添加虚拟墙失败');
-    console.log('addVW wallIds', wallIds);
+    console.log('addVW res', result, wallIds);
   }
 }
