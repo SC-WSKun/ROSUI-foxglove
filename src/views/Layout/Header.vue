@@ -11,15 +11,10 @@
           <DownOutlined :style="{ fontSize: '12px' }" />
         </a>
         <template #overlay>
-          <a-empty
-            v-if="!menus.length"
-            :image="emptyImage"
-            description="no data"
-            :image-style="{
-              margin: '30px 40px',
-              marginBottom: '10px'
-            }"
-          ></a-empty>
+          <a-empty v-if="!menus.length" :image="emptyImage" description="no data" :image-style="{
+            margin: '30px 40px',
+            marginBottom: '10px'
+          }"></a-empty>
           <a-menu @click="handleMenuClick" v-else>
             <a-menu-item v-for="item in menus" :key="item.key">
               <span>{{ item.text }}</span>
@@ -44,6 +39,7 @@ import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useRtcClientStore } from '@/stores/rtcClient'
 import type P2PSocket from '@/utils/p2psocket'
 import Wifi from '@/components/Wifi.vue';
+import CreateRobot from '@/components/CreateRobot.vue'
 
 const router = useRouter()
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
@@ -51,7 +47,7 @@ const globalStore = useGlobalStore()
 const foxgloveClientStore = useFoxgloveClientStore()
 const rtcClientStore = useRtcClientStore()
 
-let connectTimer: number | null = null
+let connectTimer: NodeJS.Timeout | null = null
 
 const menus: any[] = [
   {
@@ -65,9 +61,12 @@ const menus: any[] = [
   {
     key: 'wifiConnect',
     text: 'wifi配网连接'
+  },
+  {
+    key: 'create',
+    text: '创建机器人'
   }
 ]
-
 // 处理菜单点击事件
 const handleMenuClick = ({ key }: { key: string }) => {
   switch (key) {
@@ -79,6 +78,10 @@ const handleMenuClick = ({ key }: { key: string }) => {
       break
     case 'wifiConnect':
       handleWifiConnext()
+      break;
+    case 'create':
+      handleCreateRobot()
+      break;
     default:
       break
   }
@@ -114,7 +117,8 @@ const handleConnect = () => {
         connectTimer = setInterval(() => {
           const end = new Date().getTime()
           if (end - start > 1000 * 30) {
-            clearInterval(connectTimer as number)
+            if (connectTimer)
+              clearInterval(connectTimer)
             connectTimer = null
             globalStore.setLoading(false)
             rtcClientStore.closeRtcClient()
@@ -122,7 +126,7 @@ const handleConnect = () => {
           }
         })
         const socket: P2PSocket = await rtcClientStore.initRtcClient(record.id)
-        clearInterval(connectTimer as number)
+        clearInterval(connectTimer)
         connectTimer = null
         foxgloveClientStore.initClient(socket)
         globalStore.setLoading(false)
@@ -149,6 +153,15 @@ const handleWifiConnext = () => {
     title: "配网",
     type: "custom",
     component: Wifi,
+    showFooter: false,
+  });
+}
+
+const handleCreateRobot = () => {
+  globalStore.openModal({
+    title: "创建机器人",
+    type: "custom",
+    component: CreateRobot,
     showFooter: false,
   });
 }

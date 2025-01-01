@@ -21,8 +21,8 @@ export class VirtualWall {
   canvas: HTMLCanvasElement | null = null;
   interactivePointWrap: HTMLElement | null = null;
   isDrawing = false;
-  revokeHistory: Uint8Array<ArrayBufferLike>[] = [];
   lines: ILine[] = [];
+  revokeHistory: Uint8Array[] = [];
   x = 0;
   y = 0;
   // moudeDown位置
@@ -51,10 +51,10 @@ export class VirtualWall {
 
   handleDraw() {
     if (!this.canvas) return;
-    const ctx = this.canvas.getContext('2d')!;
+    const ctx = this.canvas.getContext("2d")!;
     ctx.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
 
-    this.canvas.addEventListener('mousedown', (event) => {
+    this.canvas.addEventListener("mousedown", (event: any) => {
       if (!this.canvas || event.button !== MOUSE_LEFT_BUTTON) return;
 
       // 存储压缩数据
@@ -67,7 +67,7 @@ export class VirtualWall {
       this.isDrawing = true;
     });
 
-    this.canvas?.addEventListener('mousemove', (event) => {
+    this.canvas?.addEventListener('mousemove', (event: any) => {
       if (event.button !== MOUSE_LEFT_BUTTON || !this.isDrawing || !this.canvas) return;
 
       // 避免绘制中鼠标移出canvas界限导致绘制异常
@@ -80,15 +80,21 @@ export class VirtualWall {
       this.y = event.layerY;
     });
 
-    this.canvas?.addEventListener('mouseup', (event) => {
+    this.canvas?.addEventListener('mouseup', (event: any) => {
       if (event.button !== MOUSE_LEFT_BUTTON || !this.isDrawing) return;
       this.endDraw(event);
     });
   }
 
-  drawLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) {
+  drawLine(
+    ctx: CanvasRenderingContext2D,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number
+  ) {
     ctx.beginPath();
-    ctx.strokeStyle = 'orange';
+    ctx.strokeStyle = "orange";
     ctx.lineWidth = 2;
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
@@ -101,8 +107,12 @@ export class VirtualWall {
     try {
       const decompressed = pako.inflate(compressed);
       const unit8ClampedArray = new Uint8ClampedArray(decompressed);
-      const imgData = new ImageData(unit8ClampedArray, this.canvas.width, this.canvas.height);
-      const ctx = this.canvas.getContext('2d');
+      const imgData = new ImageData(
+        unit8ClampedArray,
+        this.canvas.width,
+        this.canvas.height
+      );
+      const ctx = this.canvas.getContext("2d");
       ctx?.putImageData(imgData, 0, 0);
       this.lines.pop();
     } catch (err) {
@@ -117,7 +127,7 @@ export class VirtualWall {
     this.revokeHistory.push(compressed);
   }
 
-  endDraw(event: MouseEvent) {
+  endDraw(event: any) {
     const ctx = this.canvas!.getContext('2d')!;
     this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
     this.x = 0;
@@ -138,7 +148,7 @@ export class VirtualWall {
 
   clear() {
     if (!this.canvas) return;
-    const ctx = this.canvas.getContext('2d')!;
+    const ctx = this.canvas.getContext("2d")!;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.revokeHistory = [];
     this.lines = [];
