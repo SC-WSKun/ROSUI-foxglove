@@ -27,7 +27,7 @@ export class VirtualWall {
     const ctx = this.canvas.getContext("2d")!;
     ctx.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
 
-    this.canvas.addEventListener("mousedown", (event) => {
+    this.canvas.addEventListener("mousedown", (event: any) => {
       if (!this.canvas || event.button !== MOUSE_LEFT_BUTTON) return;
 
       // 存储压缩数据
@@ -46,7 +46,7 @@ export class VirtualWall {
       this.isDrawing = true;
     });
 
-    this.canvas?.addEventListener("mousemove", (event) => {
+    this.canvas?.addEventListener("mousemove", (event: any) => {
       if (event.button !== MOUSE_LEFT_BUTTON) return;
       if (this.isDrawing) {
         this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
@@ -55,7 +55,7 @@ export class VirtualWall {
       }
     });
 
-    this.canvas?.addEventListener("mouseup", (event) => {
+    this.canvas?.addEventListener("mouseup", (event: any) => {
       if (event.button !== MOUSE_LEFT_BUTTON) return;
       if (this.isDrawing) {
         this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
