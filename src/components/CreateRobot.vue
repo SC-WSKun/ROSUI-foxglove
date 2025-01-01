@@ -12,6 +12,7 @@
                 </div>
             </div>
         </div>
+        <a-input v-model:value.lazy="robotName" autofocus placeholder="请为你的机器人起个名字吧～"/>
     </div>
 </template>
 
@@ -28,6 +29,7 @@ enum Cert_Status {
     'Error'
 }
 const btnText = ref('开始创建')
+const robotName = ref('')
 const generateStatus = ref(Cert_Status.Waiting)
 const certPath = ref('')
 watch(generateStatus, (newValue) => {
@@ -59,6 +61,7 @@ const createCert = () => {
         if (res.code === 0) {
             generateStatus.value = Cert_Status.Generated
             certPath.value = res.certPath
+            message.success('创建机器人证书成功')
         } else {
             generateStatus.value = Cert_Status.Error
             throw Error(res)
@@ -82,6 +85,7 @@ const downloadCert = () => {
         document.body.appendChild(link);
         link.click();
         window.URL.revokeObjectURL(url);
+        generateStatus.value = Cert_Status.Downloaded
     }).catch(error => {
         console.error(error)
         message.error('下载机器人证书失败')
@@ -109,9 +113,11 @@ const handleBtnClick = () => {
 
 <style lang="less" scoped>
 .create-robot {
-    .flex();
+    .flex(center,center,column);
+    gap: 20px;
     width: 100%;
-    height: 12vw;
+    height: auto;
+    padding: 20px 40px;
 
     .btn {
         .flex(center, center, column);
