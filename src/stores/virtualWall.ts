@@ -15,7 +15,22 @@ export interface IVirtualWall extends ILine {
 }
 
 export const useVirtualWallStore = defineStore('virtualWall', () => {
-	const virtualWalls: Ref<IVirtualWall[]> = ref([]);
+	const virtualWalls: Ref<IVirtualWall[]> = ref([
+		{
+			wall_id: 345,
+			x0: 1.0,
+			y0: 1.0,
+			x1: 2.5,
+			y1: 3.5
+		},
+		{
+			wall_id: 248,
+			x0: 1.0,
+			y0: 3.2,
+			x1: 2.1,
+			y1: 1.0
+		},
+	]);
 	const foxgloveClientStore = useFoxgloveClientStore();
 
 	async function getVWs() {

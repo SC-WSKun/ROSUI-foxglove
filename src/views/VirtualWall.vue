@@ -2,7 +2,9 @@
   <div class="virtualWall">
     <div class="view" id="virtualWallMap">
       <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
-      <VirtualWallCom :drawManage="state.drawManage" :isWatching="false"/>
+      <div id="mapImgWrap">
+        <VirtualWallCom :drawManage="state.drawManage" :isWatching="false"/>
+      </div>
     </div>
     <div class="config">
       <a-card
@@ -18,7 +20,7 @@
         <div class="btn" v-if="state.curState === 1">
           <div style="width: 100%; display: flex; justify-content: space-around;">
             <a-button @click="changeMode" type="primary">
-              {{ state.mode === Mode.DRAW ? '删除模式' : '绘制模式' }}
+              切换{{ state.mode === Mode.DRAW ? '删除模式' : '绘制模式' }}
             </a-button>
           </div>
           <template v-if="state.mode === Mode.DRAW">

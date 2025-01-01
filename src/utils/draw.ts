@@ -168,7 +168,9 @@ export default class DrawManage {
 
     // imgWrap包含map和arrow
     if (!this.imgWrap) {
-      this.imgWrap = document.createElement("div");
+      const tempEl = document.getElementById('mapImgWrap');
+      if (!tempEl) this.imgWrap = document.createElement("div");
+      else this.imgWrap = tempEl;
       this.imgWrap.style.position = "relative";
       wrap.appendChild(this.imgWrap);
     }

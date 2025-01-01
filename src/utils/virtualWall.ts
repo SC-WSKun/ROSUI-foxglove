@@ -8,7 +8,7 @@ import { message } from "ant-design-vue";
 const MOUSE_LEFT_BUTTON = 0;
 const virtualWallStore = useVirtualWallStore();
 
-const zIndex = '11';
+const zIndex = 11;
 
 export enum Mode {
   DRAW = 0,
@@ -181,26 +181,29 @@ export class VirtualWall {
         mapInfo.origin.position.y,
       );
       const el = document.createElement('div');
+      el.className = 'interactive-point';
       el.style.position = 'absolute';
       el.style.top = `${(y0 + y1) / 2}px`;
       el.style.left = `${(x0 + x1) / 2}px`;
       el.addEventListener('click', async () => {
+        console.log('interactive-point click');
         const result = await virtualWallStore.delVW(wall.wall_id);
         if (!result) return message.error("删除虚拟墙失败");
         this.interactivePointWrap?.removeChild(el);
       });
       this.interactivePointWrap?.appendChild(el);
+      console.log('drawInteractivePoint', x0, y0, x1, y1);
     });
   }
 
   changeMode(mode: Mode) {
     if (!this.canvas || !this.interactivePointWrap) return;
-    if (mode = Mode.DRAW) {
-      this.canvas.style.zIndex = zIndex + 1;
+    if (mode === Mode.DRAW) {
+      this.canvas.style.zIndex = `${zIndex + 1}`;
       this.interactivePointWrap.style.zIndex = zIndex;
     } else {
       this.canvas.style.zIndex = zIndex;
-      this.interactivePointWrap.style.zIndex = zIndex + 1;
+      this.interactivePointWrap.style.zIndex = `${zIndex + 1}`;
     }
   }
 
