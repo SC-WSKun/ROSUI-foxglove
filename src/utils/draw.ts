@@ -850,7 +850,7 @@ export default class DrawManage {
 }
 
 // 像素坐标转真实世界坐标
-const pixelToWorldCoordinate = (
+export const pixelToWorldCoordinate = (
   pixelOffsetX: number,
   pixelOffsetY: number,
   scale: number,
