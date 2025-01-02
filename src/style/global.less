@@ -152,5 +152,29 @@
 .virtual-wall-canvas {
   position: absolute;
   overflow: hidden;
+  z-index: 12;
+}
+
+.interactive-point-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
   z-index: 11;
+  .interactive-point {
+    box-sizing: border-box;
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    margin-top: -3px;
+    border: 3px solid skyblue;
+    border-radius: 50%;
+    transition: 0.2s linear;
+    &:hover {
+      width: 24px;
+      height: 24px;
+      margin-left: -12px;
+      margin-top: -12px;
+    }
+  }
 }
