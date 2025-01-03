@@ -2,7 +2,9 @@
   <div class="navigation">
     <div class="view" id="navigationMap">
       <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
-      <VirtualWallCom v-if="state.curState > 0" :drawManage="state.drawManage" :isWatching="true"/>
+      <div id="mapImgWrap">
+        <VirtualWallCom v-if="state.curState > 0" :drawManage="state.drawManage" :isWatching="true"/>
+      </div>
     </div>
     <div class="config">
       <a-card
@@ -367,7 +369,8 @@ const mapMsgHandler = ({
       data,
     ) as GridMap;
     const wrap = document.getElementById("navigationMap") as HTMLElement;
-    state.drawManage.drawGridMap(wrap, parseData, true);
+    // todo 注释掉，不需要一直更新
+    // state.drawManage.drawGridMap(wrap, parseData, true);
   }
 };
 
@@ -445,6 +448,7 @@ const planMsgHandler = ({
       state.planSubId,
       data,
     ) as GridPlan;
+    console.log('curve msg', parseData);
     state.drawManage.drawCurve(parseData);
   }
 }

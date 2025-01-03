@@ -127,7 +127,7 @@ const tableOptions: TableOptions = {
               "virtualWallMap",
             ) as HTMLElement;
             state.drawManage.drawGridMap(wrap, res.map, true);
-            state.drawManage.createVirtualWall();
+            state.drawManage.createVirtualWall(record.map_name);
             state.curState = STATE_MAP.SELECTED;
             globalStore.setLoading(false);
             globalStore.closeModal();

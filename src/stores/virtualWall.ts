@@ -32,11 +32,14 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 		// },
 	]);
 	const foxgloveClientStore = useFoxgloveClientStore();
+	let mapName = '';
 
 	async function getVWs() {
 		const { result, walls } = await foxgloveClientStore.callService(
-			'/global_costmap/global_costmap/get_virtual_walls',
-			{}
+			'/nav2_extended/get_virtual_walls',
+			{
+				map_name: mapName,
+			}
 		);
 		console.log('getVWs result ---------------', result, walls);
 		virtualWalls.value = walls;
@@ -44,8 +47,9 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 
 	async function addVW(walls: ILine[]) {
 		const res = await foxgloveClientStore.callService(
-			'/global_costmap/global_costmap/add_virtual_walls',
+			'/nav2_extended/add_virtual_walls',
 			{
+				map_name: mapName,
 				walls,
 			},
 		);
@@ -58,8 +62,9 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 
 	async function delVW(wallId: number) {
 		const { result } = await foxgloveClientStore.callService(
-			'/global_costmap/global_costmap/del_virtual_wall',
+			'/nav2_extended/del_virtual_wall',
 			{
+				map_name: mapName,
 				wall_id: wallId,
 			}
 		);
@@ -72,5 +77,6 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 		addVW,
 		delVW,
 		virtualWalls,
+		mapName,
 	}
 });

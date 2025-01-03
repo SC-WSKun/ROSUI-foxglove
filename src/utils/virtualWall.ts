@@ -31,7 +31,7 @@ export class VirtualWall {
   scale:number = 1;
   mapInfo: MapInfo | null = null;
 
-  create(parentNode: HTMLElement, width: number, height: number, mapInfo: MapInfo, scale: number) {
+  create(parentNode: HTMLElement, width: number, height: number, mapInfo: MapInfo, scale: number, mapName: string) {
     if (!this.canvas) {
       this.canvas = document.createElement("canvas");
       this.canvas.className = "virtual-wall-canvas";
@@ -44,6 +44,7 @@ export class VirtualWall {
     this.canvas.height = height;
     this.scale = scale;
     this.mapInfo = mapInfo;
+    virtualWallStore.mapName = mapName;
 
     // 虚拟墙交互点
     this.drawInteractivePoint(mapInfo, scale);
@@ -95,7 +96,7 @@ export class VirtualWall {
   ) {
     ctx.beginPath();
     ctx.strokeStyle = "skyblue";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 5;
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
     ctx.stroke();

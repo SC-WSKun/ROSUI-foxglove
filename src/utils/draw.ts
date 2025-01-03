@@ -350,10 +350,10 @@ export default class DrawManage {
     });
   }
 
-  createVirtualWall() {
+  createVirtualWall(mapName: string) {
     if (!this.vwDrawer) this.vwDrawer = new VirtualWall();
     if (!this.imgWrap || !this.img || !this.mapInfo) return;
-    this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height, this.mapInfo, this.scale);
+    this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height, this.mapInfo, this.scale, mapName);
   }
 
   // 为画布添加缩放和平移拖拽功能
