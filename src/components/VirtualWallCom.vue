@@ -85,7 +85,6 @@ function drawVWs(canvasWidth: number, canvasHeight: number) {
     y1 = drawManage.imgWrap!.offsetHeight - y1;
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
-    console.log(x0, y0, x1, y1);
   });
   ctx.strokeStyle = 'skyblue';
   ctx.lineWidth = 5;

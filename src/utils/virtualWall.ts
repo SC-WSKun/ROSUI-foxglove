@@ -32,6 +32,7 @@ export class VirtualWall {
   mapInfo: MapInfo | null = null;
 
   create(imgWrap: HTMLElement, width: number, height: number, mapInfo: MapInfo, scale: number) {
+    if (!imgWrap) return;
     if (!this.canvas) {
       this.canvas = document.createElement("canvas");
       this.canvas.className = "virtual-wall-canvas";
@@ -101,7 +102,7 @@ export class VirtualWall {
     ctx.stroke();
   }
 
-  revoke() {
+  revoke(popLine?: boolean = false) {
     if (this.revokeHistory.length === 0 || !this.canvas) return;
     const compressed = this.revokeHistory.pop()!;
     try {
@@ -114,7 +115,7 @@ export class VirtualWall {
       );
       const ctx = this.canvas.getContext("2d");
       ctx?.putImageData(imgData, 0, 0);
-      this.lines.pop();
+      if (popLine) this.lines.pop();
     } catch (err) {
       console.error(err);
     }
@@ -133,7 +134,7 @@ export class VirtualWall {
     this.x = 0;
     this.y = 0;
     this.isDrawing = false;
-
+    console.log('endDraw-----------', this.lines);
     // 曲线变直线
     this.revoke();
     this.save();

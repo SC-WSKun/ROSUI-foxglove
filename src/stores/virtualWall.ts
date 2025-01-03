@@ -2,6 +2,7 @@ import { defineStore, storeToRefs } from 'pinia';
 import _ from 'lodash'
 import { ref, type Ref } from 'vue';
 import { useFoxgloveClientStore } from './foxgloveClient';
+import { message } from 'ant-design-vue';
 
 export interface ILine {
 	x0: number;
@@ -49,6 +50,7 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 
 	async function addVW(walls: ILine[]) {
 		console.log('addVW', mapName.value);
+		if (walls.length === 0) return message.warning('未绘制虚拟墙!');
 		const res = await foxgloveClientStore.callService(
 			'/nav2_extended/add_virtual_walls',
 			{
