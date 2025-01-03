@@ -2,6 +2,14 @@
 	<div>
 		<div class="top-btns">
 			<a-button type="primary" @click="addPatrolPoint">添加巡逻点</a-button>
+			<div>
+				<a-input-number
+					v-model:value="count"
+					:min="1"
+					style="width: 50px; text-align: center;"
+				/>
+				<span style="display: inline-block; vertical-align: middle; padding-left: 10px;">次</span>
+			</div>
 			<a-button type="primary" @click="startPatrol">开始巡逻</a-button>
 		</div>
 		<ul class="patrol-list">
@@ -13,15 +21,17 @@
 						<a-button @click="openAddEventModal(idx)">添加事件</a-button>
 					</div>
 				</div>
-				<div>
-					<a-tag
-						v-for="(event, eIdx) in point?.events"
-						:key="eIdx"
-						closable
-						@close.prevent="delEvent(idx, eIdx)"
-					>
-						{{ event }}
-					</a-tag>
+				<div class="tag-container">
+					<VueDraggable v-if="point.events" v-model="point.events">
+						<a-tag
+							v-for="(event, eIdx) in point?.events"
+							:key="event"
+							closable
+							@close.prevent="delEvent(idx, eIdx)"
+						>
+							{{ event }}
+						</a-tag>
+    			</VueDraggable>
 				</div>
 			</li>
 		</ul>
@@ -43,12 +53,14 @@ import { usePatrolStore, PatrolEvent } from '@/stores/patrol';
 import DrawManage from '@/utils/draw';
 import { message } from 'ant-design-vue';
 import { ref } from 'vue';
+import { VueDraggable } from 'vue-draggable-plus';
 
 const globalStore = useGlobalStore();
 const { pointsSelected, delPatrolPoint, addEvent, delEvent } = usePatrolStore();
 const showEventsModal = ref(false);
 const pointIdx = ref(-1);
 const selectedEvent = ref(PatrolEvent.EVENT1);
+const count = ref(1);
 
 const props = defineProps<{
 	props: {
@@ -109,6 +121,10 @@ const startPatrol = () => {
 	&:hover {
 		transform: scale(1.2);
 	}
+}
+
+.tag-container {
+	margin-top: 10px;
 }
 </style>
   
