@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import _ from 'lodash'
 import { ref, type Ref } from 'vue';
 import { useFoxgloveClientStore } from './foxgloveClient';
@@ -32,13 +32,15 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 		// },
 	]);
 	const foxgloveClientStore = useFoxgloveClientStore();
-	let mapName = '';
+	const mapName = ref('');
 
 	async function getVWs() {
+		console.log('getVWs params ---------------', mapName.value);
+		if (!mapName.value) return;
 		const { result, walls } = await foxgloveClientStore.callService(
 			'/nav2_extended/get_virtual_walls',
 			{
-				map_name: mapName,
+				map_name: mapName.value,
 			}
 		);
 		console.log('getVWs result ---------------', result, walls);
@@ -46,10 +48,11 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 	}
 
 	async function addVW(walls: ILine[]) {
+		console.log('addVW', mapName.value);
 		const res = await foxgloveClientStore.callService(
 			'/nav2_extended/add_virtual_walls',
 			{
-				map_name: mapName,
+				map_name: mapName.value,
 				walls,
 			},
 		);
@@ -64,7 +67,7 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 		const { result } = await foxgloveClientStore.callService(
 			'/nav2_extended/del_virtual_wall',
 			{
-				map_name: mapName,
+				map_name: mapName.value,
 				wall_id: wallId,
 			}
 		);
@@ -72,11 +75,17 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 		return result;
 	}
 
+	function setMapName(name: string) {
+		mapName.value = name;
+	}
+
 	return {
 		getVWs,
 		addVW,
 		delVW,
+		setMapName,
 		virtualWalls,
-		mapName,
 	}
 });
+
+export const useVirtualWallStoreRef = () => storeToRefs(useVirtualWallStore());

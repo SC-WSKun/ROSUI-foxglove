@@ -119,3 +119,75 @@ export const useGlobalStore = defineStore("global", () => {
     closeLabelInput,
   };
 });
+
+class GlobalStore {
+  state = reactive<GlobalState>({
+    loading: false,
+    loadingTip: "加载中...",
+    modalRef: null,
+    connected: false,
+    odomToMap: null,
+    baseFootprintToOdom: null,
+    baseLinkToBaseFootprint: null,
+    baseScanToBaseLink: null,
+    imuLinkToBaseLink: null,
+    laserLinkToBaseLink: null,
+    leftWheelToBaseLink: null,
+    rightWheelToBaseLink: null,
+    showLabelInput: false,
+  });
+
+  setLoading(loading: boolean, loadingTip?: string) {
+    this.state.loadingTip = loadingTip || "加载中...";
+    this.state.loading = loading;
+  }
+
+  setModalRef(modalRef: any) {
+    this.state.modalRef = modalRef;
+  }
+
+  setConnected(connected: boolean) {
+    this.state.connected = connected;
+  }
+
+  isConnected() {
+    return this.state.connected;
+  }
+
+  openModal(modalOptions: ModalOptions) {
+    this.state.modalRef.openModal(modalOptions);
+  }
+
+  closeModal() {
+    this.state.modalRef.closeModal();
+  }
+
+  updateTransform(
+    transforms: {
+      transform: Transform;
+      child_frame_id: string;
+      [key: string]: any;
+    }[],
+  ) {
+    transforms.forEach((transform) => {
+      const { transform_map } = dict;
+      _.set(
+        this.state,
+        _.get(transform_map, transform.child_frame_id),
+        transform.transform,
+      );
+    });
+  }
+
+  getTransform(transformKey: string) {
+    return _.get(this.state, transformKey);
+  }
+
+  switchLabelInput() {
+    this.state.showLabelInput = !this.state.showLabelInput;
+  }
+
+  closeLabelInput() {
+    this.state.showLabelInput = false;
+  }
+}

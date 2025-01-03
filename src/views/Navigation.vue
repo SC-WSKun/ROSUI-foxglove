@@ -3,7 +3,12 @@
     <div class="view" id="navigationMap">
       <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
       <div id="mapImgWrap">
-        <VirtualWallCom v-if="state.curState > 0" :drawManage="state.drawManage" :isWatching="true"/>
+        <VirtualWallCom
+          v-if="state.curState > 0"
+          :drawManage="state.drawManage"
+          :mapName="state.mapName"
+          style="pointer-events: none;"
+        />
       </div>
     </div>
     <div class="config">
@@ -126,6 +131,7 @@ interface State {
   candidateMap: Map | null;
   lastState: number;
   newLabelName: string;
+  mapName: string;
 }
 
 const foxgloveClientStore = useFoxgloveClientStore();
@@ -146,6 +152,7 @@ const state = reactive<State>({
   candidateMap: null, // 选择的地图，未指定初始位姿
   lastState: 0, // 上一个状态，针对指定初始位姿的取消操作
   newLabelName: "",
+  mapName: "",
 });
 
 const STATE_MAP = {
@@ -249,6 +256,7 @@ const tableOptions: TableOptions = {
             globalStore.setLoading(false);
             initPose();
             globalStore.closeModal();
+            state.mapName = record.map_name;
           })
           .catch((err) => {
             console.log(err);

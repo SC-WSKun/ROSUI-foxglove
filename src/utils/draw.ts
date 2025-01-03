@@ -27,6 +27,7 @@ export default class DrawManage {
   labelWrap: HTMLElement | null = null;
   patrolWrap: HTMLElement | null = null;
   planCurveCanvas: HTMLCanvasElement | null = null;
+  testPlanCurveCanvas: HTMLElement | null = null;
   vwDrawer: VirtualWall | null = null;
   scanPoints: HTMLElement[] = [];
   addingNav: boolean = false;
@@ -281,7 +282,7 @@ export default class DrawManage {
     for (let idx = 0; idx < poses.length; idx++) {
       if (!this.mapInfo) return;
       const { pose: { position } } = poses[idx];
-      const { x, y } = worldCoordinateToPixel(
+      let { x, y } = worldCoordinateToPixel(
         position.x,
         position.y,
         this.scale,
@@ -289,17 +290,16 @@ export default class DrawManage {
         this.mapInfo.origin.position.x,
         this.mapInfo.origin.position.y
       );
+      y = this.imgWrap.offsetHeight - y;
       if (idx === 0) {
         offsetX = x - carX;
         offsetY = y - carY;
         ctx.moveTo(carX, carY);
-        ctx.arc(carX, carY, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'red';
-        ctx.fill();
-      }
-      else ctx.lineTo(x - offsetX, y - offsetY);
+        ctx.lineTo(x - offsetX, y - offsetY);
+      } else if (idx < poses.length - 1) ctx.lineTo(x, y);
+      else ctx.arc(x, y, 2, 0, Math.PI * 2);
     }
-    ctx.strokeStyle = 'blue';
+    ctx.strokeStyle = 'grey';
     ctx.lineWidth = 2;
     ctx.stroke();
   }
@@ -350,10 +350,10 @@ export default class DrawManage {
     });
   }
 
-  createVirtualWall(mapName: string) {
+  createVirtualWall() {
     if (!this.vwDrawer) this.vwDrawer = new VirtualWall();
     if (!this.imgWrap || !this.img || !this.mapInfo) return;
-    this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height, this.mapInfo, this.scale, mapName);
+    this.vwDrawer.create(this.imgWrap, this.img.width, this.img.height, this.mapInfo, this.scale);
   }
 
   // 为画布添加缩放和平移拖拽功能

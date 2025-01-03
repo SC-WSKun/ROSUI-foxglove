@@ -3,7 +3,11 @@
     <div class="view" id="virtualWallMap">
       <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
       <div id="mapImgWrap">
-        <VirtualWallCom :drawManage="state.drawManage" :isWatching="false"/>
+        <VirtualWallCom
+          v-if="state.curState > 0"
+          :drawManage="state.drawManage"
+          :mapName="state.mapName"
+        />
       </div>
     </div>
     <div class="config">
@@ -55,6 +59,7 @@ interface State {
   connecting: boolean;
   curState: number;
   mode: Mode;
+  mapName: string;
 }
 
 const foxgloveClientStore = useFoxgloveClientStore();
@@ -68,6 +73,7 @@ const state = reactive<State>({
   connecting: false, // 连接地图ing
   curState: 0, // 当前状态step
   mode: 0, // 当前模式
+  mapName: '', // 当前选择的map_name
 });
 
 const STATE_MAP = {
@@ -127,7 +133,9 @@ const tableOptions: TableOptions = {
               "virtualWallMap",
             ) as HTMLElement;
             state.drawManage.drawGridMap(wrap, res.map, true);
-            state.drawManage.createVirtualWall(record.map_name);
+            state.drawManage.createVirtualWall();
+            state.mapName = record.map_name;
+            state.drawManage.vwDrawer?.changeMode(state.mode);
             state.curState = STATE_MAP.SELECTED;
             globalStore.setLoading(false);
             globalStore.closeModal();
@@ -201,7 +209,9 @@ const selectMap = () => {
 
 // 完成虚拟墙绘制
 const confirmVW = () => {
-  state.drawManage.vwDrawer?.addVW();
+  const result = state.drawManage.vwDrawer?.addVW();
+  if (!result) return;
+  state.drawManage.vwDrawer?.clear();
 }
 
 // 撤销上一步绘制
