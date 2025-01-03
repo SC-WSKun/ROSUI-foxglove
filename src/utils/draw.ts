@@ -108,7 +108,7 @@ export default class DrawManage {
         this.globalStore.updateTransform(parseData.transforms);
       } else if (subscriptionId === this.scanSubId) {
         const time = new Date().getTime();
-        if (time - this.scanPointsTime < 1000) return;
+        if (time - this.scanPointsTime < 50) return;
         this.scanPointsTime = time;
         const parseData = this.foxgloveClientStore.readMsgWithSubId(
           subscriptionId,
@@ -627,8 +627,8 @@ export default class DrawManage {
     if (!this.pointsWrap) {
       this.pointsWrap = document.createElement("div");
       this.pointsWrap.className = "points-wrap";
+      this.imgWrap.appendChild(this.pointsWrap);
     }
-    this.imgWrap.appendChild(this.pointsWrap);
     // 清除之前的红点
     this.pointsWrap.innerHTML = "";
     points.forEach((point: { x: number; y: number } | null) => {
