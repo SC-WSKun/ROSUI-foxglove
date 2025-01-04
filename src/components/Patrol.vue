@@ -3,6 +3,7 @@
 		<div style="flex-grow: 1;">
 			<div class="top-btns">
 				<a-button type="primary" @click="addPatrolPoint">添加巡逻点</a-button>
+				<a-button type="primary" @click="startPatrol">开始巡逻</a-button>
 				<div>
 					<a-input-number
 						v-model:value="count"
@@ -11,7 +12,6 @@
 					/>
 					<span style="display: inline-block; vertical-align: middle; padding-left: 10px;">次</span>
 				</div>
-				<a-button type="primary" @click="startPatrol">开始巡逻</a-button>
 			</div>
 			<ul class="patrol-list">
 				<li v-for="(point, idx) in pointsSelected" :key="idx">
@@ -140,8 +140,8 @@ const startPatrol = () => {
 	flex-direction: column;
 	align-items: center;
 	border-left: 2px solid #ccc;
-	padding-left: 10px;
-	margin-left: 10px;
+	padding-left: 20px;
+	margin-left: 20px;
 	.tip {
 		font-size: 12px;
 	}
