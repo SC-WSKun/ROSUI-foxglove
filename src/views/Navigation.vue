@@ -488,6 +488,7 @@ const patrolManage = () => {
     },
     component: Patrol,
     showFooter: false,
+    width: 600,
   });
 }
 

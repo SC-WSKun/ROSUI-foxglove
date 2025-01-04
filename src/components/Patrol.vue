@@ -1,49 +1,58 @@
 <template>
-	<div>
-		<div class="top-btns">
-			<a-button type="primary" @click="addPatrolPoint">添加巡逻点</a-button>
-			<div>
-				<a-input-number
-					v-model:value="count"
-					:min="1"
-					style="width: 50px; text-align: center;"
-				/>
-				<span style="display: inline-block; vertical-align: middle; padding-left: 10px;">次</span>
+	<div style="display: flex;">
+		<div style="flex-grow: 1;">
+			<div class="top-btns">
+				<a-button type="primary" @click="addPatrolPoint">添加巡逻点</a-button>
+				<div>
+					<a-input-number
+						v-model:value="count"
+						:min="1"
+						style="width: 50px; text-align: center;"
+					/>
+					<span style="display: inline-block; vertical-align: middle; padding-left: 10px;">次</span>
+				</div>
+				<a-button type="primary" @click="startPatrol">开始巡逻</a-button>
 			</div>
-			<a-button type="primary" @click="startPatrol">开始巡逻</a-button>
-		</div>
-		<ul class="patrol-list">
-			<li v-for="(point, idx) in pointsSelected" :key="idx">
-				<div  style="display: flex; justify-content: space-between;">
-					<span>{{ point.label_name }}</span>
-					<div>
-						<span class="del-btn" @click="delPatrolPoint(idx)">x</span>
-						<a-button @click="openAddEventModal(idx)">添加事件</a-button>
+			<ul class="patrol-list">
+				<li v-for="(point, idx) in pointsSelected" :key="idx">
+					<div  style="display: flex; justify-content: space-between;">
+						<span>{{ point.label_name }}</span>
+						<div>
+							<span class="del-btn" @click="delPatrolPoint(idx)">x</span>
+							<a-button @click="openAddEventModal(idx)">添加事件</a-button>
+						</div>
 					</div>
-				</div>
-				<div class="tag-container">
-					<VueDraggable v-if="point.events" v-model="point.events">
-						<a-tag
-							v-for="(event, eIdx) in point?.events"
-							:key="event"
-							closable
-							@close.prevent="delEvent(idx, eIdx)"
-						>
-							{{ event }}
-						</a-tag>
-    			</VueDraggable>
-				</div>
-			</li>
-		</ul>
-		<a-modal v-model:open="showEventsModal" title="Basic Modal" @ok="confirmAddEvent">
-      <a-select
-    	  ref="select"
-    	  v-model:value="selectedEvent"
-    	  style="width: 120px"
-    	>
-    	  <a-select-option v-for="(event, idx) in PatrolEvent" :key="idx">{{ event }}</a-select-option>
-    	</a-select>
-    </a-modal>
+					<div class="tag-container">
+						<VueDraggable v-if="point.events" v-model="point.events">
+							<a-tag
+								v-for="(event, eIdx) in point?.events"
+								:key="event"
+								closable
+								@close.prevent="delEvent(idx, eIdx)"
+							>
+								{{ event }}
+							</a-tag>
+  	  			</VueDraggable>
+					</div>
+				</li>
+			</ul>
+		</div>
+		<div
+			v-if="showEventsModal"
+			class="events-list-container"
+		>
+			<a-button type="primary" @click="showEventsModal = false">关闭</a-button>
+			<p class="tip">Tip: 巡逻点事件可拖动排序</p>
+			<ul class="events-list">
+				<li
+					v-for="(event, idx) in PatrolEvent"
+					:key="idx"
+					@click="confirmAddEvent(event)"
+				>
+					{{ event }}
+				</li>
+			</ul>
+		</div>
 	</div>
 </template>
 
@@ -59,7 +68,6 @@ const globalStore = useGlobalStore();
 const { pointsSelected, delPatrolPoint, addEvent, delEvent } = usePatrolStore();
 const showEventsModal = ref(false);
 const pointIdx = ref(-1);
-const selectedEvent = ref(PatrolEvent.EVENT1);
 const count = ref(1);
 
 const props = defineProps<{
@@ -79,8 +87,8 @@ const openAddEventModal = (idx: number) => {
 	pointIdx.value = idx;
 }
 
-const confirmAddEvent = () => {
-	showEventsModal.value = !addEvent(selectedEvent.value, pointIdx.value);
+const confirmAddEvent = (event: PatrolEvent) => {
+	addEvent(event, pointIdx.value);
 }
 
 const startPatrol = () => {
@@ -125,6 +133,37 @@ const startPatrol = () => {
 
 .tag-container {
 	margin-top: 10px;
+}
+
+.events-list-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	border-left: 2px solid #ccc;
+	padding-left: 10px;
+	margin-left: 10px;
+	.tip {
+		font-size: 12px;
+	}
+	.events-list {
+		list-style: none;
+		margin: 0;
+		padding-left: 0;
+		li {
+			cursor: pointer;
+			font-family: 'Roboto Slab', serif;
+			width: 150px;
+			height: 35px;
+			line-height: 35px;
+			padding-left: 10px;
+			background-color: peachpuff;
+			border-radius: 10px;
+			margin-bottom: 10px;
+			&:hover {
+				background-color: #f9c08e;
+			}
+		}
+	}
 }
 </style>
   

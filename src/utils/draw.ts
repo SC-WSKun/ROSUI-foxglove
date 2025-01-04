@@ -108,7 +108,7 @@ export default class DrawManage {
         this.globalStore.updateTransform(parseData.transforms);
       } else if (subscriptionId === this.scanSubId) {
         const time = new Date().getTime();
-        if (time - this.scanPointsTime < 50) return;
+        if (time - this.scanPointsTime < 100) return;
         this.scanPointsTime = time;
         const parseData = this.foxgloveClientStore.readMsgWithSubId(
           subscriptionId,
