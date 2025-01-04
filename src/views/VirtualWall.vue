@@ -36,6 +36,14 @@
         </div>
       </a-card>
     </div>
+    <a-modal
+      v-model:open="state.openClearModel"
+      title="Tip"
+      @ok="handleClear"
+      @cancel="state.openClearModel = false"
+    >
+      <p>是否清除本次绘制的所有虚拟墙？</p>
+    </a-modal>
   </div>
 </template>
 
@@ -60,6 +68,7 @@ interface State {
   curState: number;
   mode: Mode;
   mapName: string;
+  openClearModel: boolean;
 }
 
 const foxgloveClientStore = useFoxgloveClientStore();
@@ -74,6 +83,7 @@ const state = reactive<State>({
   curState: 0, // 当前状态step
   mode: 0, // 当前模式
   mapName: '', // 当前选择的map_name
+  openClearModel: false,
 });
 
 const STATE_MAP = {
@@ -221,6 +231,11 @@ const revokeVW = () => {
 
 // 清除虚拟墙绘制
 const clearVW = () => {
+  state.openClearModel = true;
+}
+
+const handleClear = () => {
+  state.openClearModel = false;
   state.drawManage.vwDrawer?.clear();
 }
 

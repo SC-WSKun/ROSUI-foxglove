@@ -86,7 +86,7 @@ function drawVWs(canvasWidth: number, canvasHeight: number) {
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
   });
-  ctx.strokeStyle = 'skyblue';
+  ctx.strokeStyle = 'orange';
   ctx.lineWidth = 5;
   ctx.stroke();
 }
