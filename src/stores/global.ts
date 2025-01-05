@@ -121,22 +121,24 @@ type GlobalState = {
 // });
 
 class GlobalStore {
-  state: GlobalState = {
-    loading: false,
-    loadingTip: "加载中...",
-    modalRef: null,
-    connected: false,
-    odomToMap: null,
-    baseFootprintToOdom: null,
-    baseLinkToBaseFootprint: null,
-    baseScanToBaseLink: null,
-    imuLinkToBaseLink: null,
-    laserLinkToBaseLink: null,
-    leftWheelToBaseLink: null,
-    rightWheelToBaseLink: null,
-    showLabelInput: false,
-  };
-
+  state: GlobalState;
+  constructor(){
+    this.state = reactive<GlobalState>({
+      loading: false,
+      loadingTip: "加载中...",
+      modalRef: null,
+      connected: false,
+      odomToMap: null,
+      baseFootprintToOdom: null,
+      baseLinkToBaseFootprint: null,
+      baseScanToBaseLink: null,
+      imuLinkToBaseLink: null,
+      laserLinkToBaseLink: null,
+      leftWheelToBaseLink: null,
+      rightWheelToBaseLink: null,
+      showLabelInput: false,
+    })
+  }
   setLoading(loading: boolean, loadingTip?: string) {
     this.state.loadingTip = loadingTip || "加载中...";
     this.state.loading = loading;
