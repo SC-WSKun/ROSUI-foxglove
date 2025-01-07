@@ -81,7 +81,7 @@
           <a-button @click="confirmConnect" type="primary">确认连接</a-button>
           <a-button @click="cancelConnect">取消连接操作</a-button>
         </div>
-        <JoyStick v-if="globalStore.state.connected"></JoyStick>
+        <JoyStick v-if="globalStore.state.connected" :mode="state.curState >= 3"></JoyStick>
       </a-card>
     </div>
     <a-modal
