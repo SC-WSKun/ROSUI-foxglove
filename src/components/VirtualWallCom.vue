@@ -12,30 +12,37 @@ import { onMounted, watch } from 'vue';
 // 此组件单纯用于导航地图展示虚拟墙
 // 虚拟墙绘制、删除操作在view/VirtualWall
 
-const {
-  drawManage,
-  isWatching
-} = defineProps<{
+const props = defineProps<{
 	drawManage: DrawManage,
-  isWatching: boolean,
+  mapName?: string | null,
 }>();
+const { drawManage } = props;
 
 const virtualWallStore = useVirtualWallStore();
 let vwContainer = document.getElementById('vwContainer');
 let canvas: HTMLCanvasElement | null = null;
 
 onMounted(() => {
-  // 编辑态不更新
-  // if (!drawManage.img || canvas && !isWatching) return;
+  if (!drawManage.img) return;
+  if (props.mapName != '') virtualWallStore.setMapName(props.mapName!);
   virtualWallStore.getVWs();
   drawVWs(drawManage.img!.width, drawManage.img!.height);
-})
+});
+
+watch(
+  () => props.mapName,
+  () => {
+    console.log('props mapName', props.mapName);
+    if (!props.mapName) return;
+    virtualWallStore.setMapName(props.mapName);
+    virtualWallStore.getVWs();
+  }
+)
 
 watch(
   () => virtualWallStore.virtualWalls,
   () => {
-    // 非编辑态不更新
-    if (isWatching) return;
+    drawManage.vwDrawer?.drawInteractivePoint(drawManage.mapInfo, drawManage.scale);
     drawVWs(drawManage.img!.width, drawManage.img!.height);
   }
 )
@@ -58,7 +65,7 @@ function drawVWs(canvasWidth: number, canvasHeight: number) {
   console.log('drawVWs--------------------', virtualWallStore.virtualWalls);
   virtualWallStore.virtualWalls.forEach((wall: IVirtualWall) => {
     if (!drawManage?.mapInfo) return;
-    const { x: x0, y: y0 } = worldCoordinateToPixel(
+    let { x: x0, y: y0 } = worldCoordinateToPixel(
       wall.x0,
       wall.y0,
       drawManage.scale,
@@ -66,7 +73,7 @@ function drawVWs(canvasWidth: number, canvasHeight: number) {
       drawManage.mapInfo.origin.position.x,
       drawManage.mapInfo.origin.position.y,
     );
-    const { x: x1, y: y1 } = worldCoordinateToPixel(
+    let { x: x1, y: y1 } = worldCoordinateToPixel(
       wall.x1,
       wall.y1,
       drawManage.scale,
@@ -74,12 +81,13 @@ function drawVWs(canvasWidth: number, canvasHeight: number) {
       drawManage.mapInfo.origin.position.x,
       drawManage.mapInfo.origin.position.y,
     );
+    y0 = drawManage.imgWrap!.offsetHeight - y0;
+    y1 = drawManage.imgWrap!.offsetHeight - y1;
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
-    console.log(x0, y0, x1, y1);
   });
-  ctx.strokeStyle = 'skyblue';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'orange';
+  ctx.lineWidth = 5;
   ctx.stroke();
 }
 </script>

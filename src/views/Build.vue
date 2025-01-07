@@ -70,7 +70,7 @@
             >结束建图</a-button
           >
         </div>
-        <JoyStick v-if="globalStore.state.connected"></JoyStick>
+        <JoyStick v-if="globalStore.state.connected" :mode="state.curState >= 1"></JoyStick>
       </a-card>
     </div>
   </div>

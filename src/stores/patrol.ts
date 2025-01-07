@@ -105,25 +105,30 @@ export const usePatrolStore = defineStore('patrol', () => {
 		subId = -1;
 	}
 
-	async function patrol() {
+	async function patrol(loopCount: number) {
+		if (pointsSelected.value.length === 0) return message.warning('未添加巡逻点！');
 		patroling.value = false;
 		const sec = Math.floor(Date.now() / 1000);
 		const nsec = (Date.now() / 1000) * 1000000;
-		const poses = pointsSelected.value.map(p => ({
-			header: {
-				frame_id: 'map',
-  			stamp: {
-					sec,
-					nsec,
-				}
+		const patrolPoints = pointsSelected.value.map(p => ({
+			pose: {
+				header: {
+					frame_id: 'map',
+					stamp: {
+						sec,
+						nsec,
+					}
+				},
+				pose: p.pose
 			},
-			pose: p.pose
+			event_ids: p.events,
 		}));
-		console.log('patrol start ---------------', poses);
+		console.log('patrol start ---------------', patrolPoints);
 		const { result } = await foxgloveClientStore.callService(
-			'/nav2_extended/navigate_through_poses_service',
+			'/nav2_extended/start_patrol',
 			{
-				poses,
+				patrol_points: patrolPoints,
+				loop_count: loopCount,
 			}
 		);
 		console.log('patrol result ---------------', result);

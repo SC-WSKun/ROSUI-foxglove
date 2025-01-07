@@ -34,49 +34,137 @@ type GlobalState = {
   showLabelInput: boolean;
 };
 
-export const useGlobalStore = defineStore("global", () => {
-  const state = reactive<GlobalState>({
-    loading: false,
-    loadingTip: "加载中...",
-    modalRef: null,
-    connected: false,
-    odomToMap: null,
-    baseFootprintToOdom: null,
-    baseLinkToBaseFootprint: null,
-    baseScanToBaseLink: null,
-    imuLinkToBaseLink: null,
-    laserLinkToBaseLink: null,
-    leftWheelToBaseLink: null,
-    rightWheelToBaseLink: null,
-    showLabelInput: false,
-  });
+// export const useGlobalStore = defineStore("global", () => {
+//   const state = reactive<GlobalState>({
+//     loading: false,
+//     loadingTip: "加载中...",
+//     modalRef: null,
+//     connected: false,
+//     odomToMap: null,
+//     baseFootprintToOdom: null,
+//     baseLinkToBaseFootprint: null,
+//     baseScanToBaseLink: null,
+//     imuLinkToBaseLink: null,
+//     laserLinkToBaseLink: null,
+//     leftWheelToBaseLink: null,
+//     rightWheelToBaseLink: null,
+//     showLabelInput: false,
+//   });
 
-  function setLoading(loading: boolean, loadingTip?: string) {
-    state.loadingTip = loadingTip || "加载中...";
-    state.loading = loading;
+//   function setLoading(loading: boolean, loadingTip?: string) {
+//     state.loadingTip = loadingTip || "加载中...";
+//     state.loading = loading;
+//   }
+
+//   function setModalRef(modalRef: any) {
+//     state.modalRef = modalRef;
+//   }
+
+//   function setConnected(connected: boolean) {
+//     state.connected = connected;
+//   }
+
+//   function isConnected() {
+//     return state.connected;
+//   }
+
+//   function openModal(modalOptions: ModalOptions) {
+//     state.modalRef.openModal(modalOptions);
+//   }
+
+//   function closeModal() {
+//     state.modalRef.closeModal();
+//   }
+
+//   function updateTransform(
+//     transforms: {
+//       transform: Transform;
+//       child_frame_id: string;
+//       [key: string]: any;
+//     }[],
+//   ) {
+//     transforms.forEach((transform) => {
+//       const { transform_map } = dict;
+//       _.set(
+//         state,
+//         _.get(transform_map, transform.child_frame_id),
+//         transform.transform,
+//       );
+//     });
+//   }
+
+//   function getTransform(transformKey: string) {
+//     return _.get(state, transformKey);
+//   }
+
+//   function switchLabelInput() {
+//     state.showLabelInput = !state.showLabelInput;
+//   }
+
+//   function closeLabelInput() {
+//     state.showLabelInput = false;
+//   }
+
+//   return {
+//     state,
+//     setLoading,
+//     setModalRef,
+//     setConnected,
+//     isConnected,
+//     openModal,
+//     closeModal,
+//     updateTransform,
+//     getTransform,
+//     switchLabelInput,
+//     closeLabelInput,
+//   };
+// });
+
+class GlobalStore {
+  state: GlobalState;
+  constructor(){
+    this.state = reactive<GlobalState>({
+      loading: false,
+      loadingTip: "加载中...",
+      modalRef: null,
+      connected: false,
+      odomToMap: null,
+      baseFootprintToOdom: null,
+      baseLinkToBaseFootprint: null,
+      baseScanToBaseLink: null,
+      imuLinkToBaseLink: null,
+      laserLinkToBaseLink: null,
+      leftWheelToBaseLink: null,
+      rightWheelToBaseLink: null,
+      showLabelInput: false,
+    })
+  }
+  setLoading(loading: boolean, loadingTip?: string) {
+    this.state.loadingTip = loadingTip || "加载中...";
+    this.state.loading = loading;
   }
 
-  function setModalRef(modalRef: any) {
-    state.modalRef = modalRef;
+  setModalRef(modalRef: any) {
+    this.state.modalRef = modalRef;
   }
 
-  function setConnected(connected: boolean) {
-    state.connected = connected;
+  setConnected(connected: boolean) {
+    this.state.connected = connected;
   }
 
-  function isConnected() {
-    return state.connected;
+  isConnected() {
+    return this.state.connected;
   }
 
-  function openModal(modalOptions: ModalOptions) {
-    state.modalRef.openModal(modalOptions);
+  openModal(modalOptions: ModalOptions) {
+    this.state.modalRef.openModal(modalOptions);
   }
 
-  function closeModal() {
-    state.modalRef.closeModal();
+  closeModal() {
+    this.state.modalRef.closeModal();
   }
 
-  function updateTransform(
+  updateTransform(
     transforms: {
       transform: Transform;
       child_frame_id: string;
@@ -86,36 +174,28 @@ export const useGlobalStore = defineStore("global", () => {
     transforms.forEach((transform) => {
       const { transform_map } = dict;
       _.set(
-        state,
+        this.state,
         _.get(transform_map, transform.child_frame_id),
         transform.transform,
       );
     });
   }
 
-  function getTransform(transformKey: string) {
-    return _.get(state, transformKey);
+  getTransform(transformKey: string) {
+    return _.get(this.state, transformKey);
   }
 
-  function switchLabelInput() {
-    state.showLabelInput = !state.showLabelInput;
+  switchLabelInput() {
+    this.state.showLabelInput = !this.state.showLabelInput;
   }
 
-  function closeLabelInput() {
-    state.showLabelInput = false;
+  closeLabelInput() {
+    this.state.showLabelInput = false;
   }
+}
 
-  return {
-    state,
-    setLoading,
-    setModalRef,
-    setConnected,
-    isConnected,
-    openModal,
-    closeModal,
-    updateTransform,
-    getTransform,
-    switchLabelInput,
-    closeLabelInput,
-  };
-});
+let instance: GlobalStore | null = null;
+export const useGlobalStore = () => {
+  if (!instance) instance = new GlobalStore();
+  return instance;
+}

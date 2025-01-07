@@ -61,8 +61,10 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     })
     state.client.on('advertiseServices', (services: Service[]) => {
       console.log('services', services)
-
       state.services.push(...services)
+      if (state.services.length === 0 && services.length === 0) {
+        message.error('获取服务列表失败，请刷新重试');
+      } else message.success('获取服务列表成功');
     })
     state.client.on('open', () => {
       message.success('Connected successfully!')
