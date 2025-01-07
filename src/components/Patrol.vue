@@ -6,7 +6,7 @@
 				<a-button type="primary" @click="startPatrol">开始巡逻</a-button>
 				<div>
 					<a-input-number
-						v-model:value="count"
+						v-model:value="loopCount"
 						:min="1"
 						style="width: 50px; text-align: center;"
 					/>
@@ -68,7 +68,7 @@ const globalStore = useGlobalStore();
 const { pointsSelected, delPatrolPoint, addEvent, delEvent } = usePatrolStore();
 const showEventsModal = ref(false);
 const pointIdx = ref(-1);
-const count = ref(1);
+const loopCount = ref(1);
 
 const props = defineProps<{
 	props: {
@@ -95,7 +95,7 @@ const startPatrol = () => {
 	if (pointsSelected.length === 0) return message.info('请先选择巡逻点');
 	globalStore.closeModal();
 	message.success('巡逻中...');
-	props.props.drawManage.startPatrol();
+	props.props.drawManage.startPatrol(loopCount.value);
 }
 </script>
 

@@ -105,7 +105,7 @@ export const usePatrolStore = defineStore('patrol', () => {
 		subId = -1;
 	}
 
-	async function patrol() {
+	async function patrol(loopCount: number) {
 		if (pointsSelected.value.length === 0) return message.warning('未添加巡逻点！');
 		patroling.value = false;
 		const sec = Math.floor(Date.now() / 1000);
@@ -128,6 +128,7 @@ export const usePatrolStore = defineStore('patrol', () => {
 			'/nav2_extended/start_patrol',
 			{
 				patrol_points: patrolPoints,
+				loop_count: loopCount,
 			}
 		);
 		console.log('patrol result ---------------', result);

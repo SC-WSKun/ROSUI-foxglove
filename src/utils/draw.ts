@@ -304,10 +304,10 @@ export default class DrawManage {
     ctx.stroke();
   }
 
-  startPatrol() {
+  startPatrol(loopCount: number = 1) {
     if (this.imgWrap && this.patrolWrap) this.imgWrap.removeChild(this.patrolWrap);
     this.patrolWrap = null;
-    this.patrolStore?.patrol();
+    this.patrolStore?.patrol(loopCount);
   }
 
   exitPatrolMode() {
