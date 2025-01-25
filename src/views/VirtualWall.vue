@@ -226,7 +226,7 @@ const confirmVW = () => {
 
 // 撤销上一步绘制
 const revokeVW = () => {
-  state.drawManage.vwDrawer?.revoke(true);
+  state.drawManage.vwDrawer?.revoke({popLine: true});
 }
 
 // 清除虚拟墙绘制

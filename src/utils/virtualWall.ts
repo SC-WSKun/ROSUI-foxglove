@@ -70,20 +70,7 @@ export class VirtualWall {
 
     this.canvas?.addEventListener('mousemove', (event: any) => {
       if (event.button !== MOUSE_LEFT_BUTTON || !this.isDrawing || !this.canvas) return;
-
-      // 避免绘制中鼠标移出canvas界限导致绘制异常
-      if (event.layerX < 5 || event.layerX >= this.canvas.width - 5
-        || event.layerY < 5 || event.layerY >= this.canvas.height - 5
-      ) return this.endDraw(event);
-
       this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
-      this.x = event.layerX;
-      this.y = event.layerY;
-    });
-
-    this.canvas?.addEventListener('mouseup', (event: any) => {
-      if (event.button !== MOUSE_LEFT_BUTTON || !this.isDrawing) return;
-      this.endDraw(event);
     });
   }
 
@@ -94,6 +81,7 @@ export class VirtualWall {
     x1: number,
     y1: number
   ) {
+    this.revoke({popHistory: false});
     ctx.beginPath();
     ctx.strokeStyle = "orange";
     ctx.lineWidth = 5;
@@ -102,9 +90,9 @@ export class VirtualWall {
     ctx.stroke();
   }
 
-  revoke(popLine?: boolean = false) {
+  revoke({popLine = false, popHistory = true}: {popLine?: boolean, popHistory?: boolean}) {
     if (this.revokeHistory.length === 0 || !this.canvas) return;
-    const compressed = this.revokeHistory.pop()!;
+    const compressed = popHistory ? this.revokeHistory.pop()! : this.revokeHistory.at(-1);
     try {
       const decompressed = pako.inflate(compressed);
       const unit8ClampedArray = new Uint8ClampedArray(decompressed);
@@ -126,25 +114,6 @@ export class VirtualWall {
     const imageData = ctx.getImageData(0, 0, this.canvas!.width, this.canvas!.height);
     const compressed = pako.deflate(new Uint8Array(imageData.data));
     this.revokeHistory.push(compressed);
-  }
-
-  endDraw(event: any) {
-    const ctx = this.canvas!.getContext('2d')!;
-    this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
-    this.x = 0;
-    this.y = 0;
-    this.isDrawing = false;
-    console.log('endDraw-----------', this.lines);
-    // 曲线变直线
-    this.revoke();
-    this.save();
-    this.drawLine(ctx, this.startX, this.startY, event.layerX, event.layerY);
-    this.lines.push({
-      x0: this.startX,
-      y0: this.startY,
-      x1: event.layerX,
-      y1: event.layerY,
-    });
   }
 
   clear() {
@@ -195,7 +164,6 @@ export class VirtualWall {
         this.interactivePointWrap?.removeChild(el);
       });
       this.interactivePointWrap?.appendChild(el);
-      console.log('drawInteractivePoint', x0, y0, x1, y1);
     });
   }
 

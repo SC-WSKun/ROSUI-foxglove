@@ -23,6 +23,7 @@
         title="操作栏"
         :bordered="false"
         style="width: 100%; height: 100%"
+        v-disable="patroling"
       >
         <!-- 0. 等待用户获取地图列表 -->
         <div class="btn" v-if="state.curState === 0">
@@ -47,9 +48,9 @@
             <a-switch v-model:checked="state.marking"></a-switch>标点模式
           </div>
           <div class="switch" v-show="state.marking">
-            <a-switch v-model:checked="patrolStore.patroling"></a-switch>巡逻模式
+            <a-switch v-model:checked="patrolStore.patrolMode"></a-switch>巡逻模式
           </div>
-          <a-button @click="patrolManage" type="primary" v-show="patrolStore.patroling">巡逻管理</a-button>
+          <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
           <a-button @click="crossNav" type="primary">跨图导航</a-button>
           <a-button
             @click="pauseNav"
@@ -107,8 +108,8 @@ import {
   StopOutlined,
 } from "@ant-design/icons-vue";
 import { useGlobalStore } from "@/stores/global";
-import { usePatrolStore } from "@/stores/patrol";
-import { ref, onBeforeUnmount, onMounted, reactive, h, watch } from "vue";
+import { usePatrolStore, usePatrolStoreToRefs } from "@/stores/patrol";
+import { onBeforeUnmount, reactive, h, watch } from "vue";
 import { type GridMap, type Map, type GridPlan } from "@/typings";
 import type { TableOptions } from "@/typings/component";
 import type { MessageData } from "@foxglove/ws-protocol";
@@ -137,6 +138,7 @@ interface State {
 const foxgloveClientStore = useFoxgloveClientStore();
 const globalStore = useGlobalStore();
 const patrolStore = usePatrolStore();
+const { patroling } = usePatrolStoreToRefs();
 
 const state = reactive<State>({
   maps: [],
@@ -197,7 +199,7 @@ watch(
 );
 
 watch(
-  () => patrolStore.patroling,
+  () => patrolStore.patrolMode,
   () => {
     switchPatroling();
   },
@@ -488,9 +490,13 @@ const patrolManage = () => {
     },
     component: Patrol,
     showFooter: false,
-    width: 650,
+    width: 1000,
   });
 }
+
+setTimeout(() => {
+  patrolManage();
+}, 1000);
 
 // 跨图导航
 const crossNav = () => {
@@ -604,13 +610,13 @@ const switchMarking = () => {
     });
   } else {
     state.drawManage.labelRemoveListener();
-    patrolStore.patroling = false;
+    patrolStore.patrolMode = false;
   }
 };
 
 // 切换巡逻模式
 const switchPatroling = () => {
-  if (patrolStore.patroling) {
+  if (patrolStore.patrolMode) {
     patrolStore.openPatrol(state.drawManage);
     notification.success({
       placement: "topRight",

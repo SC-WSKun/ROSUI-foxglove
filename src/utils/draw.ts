@@ -14,7 +14,7 @@ import type { MessageData } from "@foxglove/ws-protocol";
 import _ from "lodash";
 import dict from "@/dict";
 import { useGlobalStore } from "@/stores/global";
-import { type PatrolPoint, type PatrolTopicMsg, usePatrolStore } from "@/stores/patrol";
+import { type PatrolPoint, type PatrolTopicMsg, type StartPatrolReq, usePatrolStore } from "@/stores/patrol";
 import { VirtualWall } from "@/utils/virtualWall";
 
 export default class DrawManage {
@@ -304,10 +304,10 @@ export default class DrawManage {
     ctx.stroke();
   }
 
-  startPatrol(loopCount: number = 1) {
+  startPatrol(params: StartPatrolReq) {
     if (this.imgWrap && this.patrolWrap) this.imgWrap.removeChild(this.patrolWrap);
     this.patrolWrap = null;
-    this.patrolStore?.patrol(loopCount);
+    this.patrolStore?.patrol(params);
   }
 
   exitPatrolMode() {
