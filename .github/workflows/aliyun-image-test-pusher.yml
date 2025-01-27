@@ -1,12 +1,11 @@
 name: Aliyun Docker Image Pusher
 
 on:
-  push:
+  pull_request:
     branches: [ master ]
 
 env:
-  REPO_TAG: registry.cn-guangzhou.aliyuncs.com/weishuokun/foxglove-ui:release
-
+  REPO_TAG: registry.cn-guangzhou.aliyuncs.com/weishuokun/foxglove-ui:test
 jobs:
 
   deploy:
