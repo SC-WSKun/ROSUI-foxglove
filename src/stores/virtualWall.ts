@@ -1,7 +1,8 @@
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import _ from 'lodash'
 import { ref, type Ref } from 'vue';
 import { useFoxgloveClientStore } from './foxgloveClient';
+import { message } from 'ant-design-vue';
 
 export interface ILine {
 	x0: number;
@@ -32,20 +33,28 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 		// },
 	]);
 	const foxgloveClientStore = useFoxgloveClientStore();
+	const mapName = ref('');
 
 	async function getVWs() {
+		console.log('getVWs params ---------------', mapName.value);
+		if (!mapName.value) return;
 		const { result, walls } = await foxgloveClientStore.callService(
-			'/global_costmap/global_costmap/get_virtual_walls',
-			{}
+			'/nav2_extended/get_virtual_walls',
+			{
+				map_name: mapName.value,
+			}
 		);
 		console.log('getVWs result ---------------', result, walls);
 		virtualWalls.value = walls;
 	}
 
 	async function addVW(walls: ILine[]) {
+		console.log('addVW', mapName.value);
+		if (walls.length === 0) return message.warning('未绘制虚拟墙!');
 		const res = await foxgloveClientStore.callService(
-			'/global_costmap/global_costmap/add_virtual_walls',
+			'/nav2_extended/add_virtual_walls',
 			{
+				map_name: mapName.value,
 				walls,
 			},
 		);
@@ -58,8 +67,9 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 
 	async function delVW(wallId: number) {
 		const { result } = await foxgloveClientStore.callService(
-			'/global_costmap/global_costmap/del_virtual_wall',
+			'/nav2_extended/del_virtual_wall',
 			{
+				map_name: mapName.value,
 				wall_id: wallId,
 			}
 		);
@@ -67,10 +77,17 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 		return result;
 	}
 
+	function setMapName(name: string) {
+		mapName.value = name;
+	}
+
 	return {
 		getVWs,
 		addVW,
 		delVW,
+		setMapName,
 		virtualWalls,
 	}
 });
+
+export const useVirtualWallStoreRef = () => storeToRefs(useVirtualWallStore());

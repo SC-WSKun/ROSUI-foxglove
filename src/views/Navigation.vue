@@ -2,7 +2,14 @@
   <div class="navigation">
     <div class="view" id="navigationMap">
       <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
-      <VirtualWallCom v-if="state.curState > 0" :drawManage="state.drawManage" :isWatching="true"/>
+      <div id="mapImgWrap">
+        <VirtualWallCom
+          v-if="state.curState > 0"
+          :drawManage="state.drawManage"
+          :mapName="state.mapName"
+          style="pointer-events: none;"
+        />
+      </div>
     </div>
     <div class="config">
       <a-card
@@ -74,7 +81,7 @@
           <a-button @click="confirmConnect" type="primary">确认连接</a-button>
           <a-button @click="cancelConnect">取消连接操作</a-button>
         </div>
-        <JoyStick v-if="globalStore.state.connected"></JoyStick>
+        <JoyStick v-if="globalStore.state.connected" :mode="state.curState >= 3"></JoyStick>
       </a-card>
     </div>
     <a-modal
@@ -124,6 +131,7 @@ interface State {
   candidateMap: Map | null;
   lastState: number;
   newLabelName: string;
+  mapName: string;
 }
 
 const foxgloveClientStore = useFoxgloveClientStore();
@@ -144,6 +152,7 @@ const state = reactive<State>({
   candidateMap: null, // 选择的地图，未指定初始位姿
   lastState: 0, // 上一个状态，针对指定初始位姿的取消操作
   newLabelName: "",
+  mapName: "",
 });
 
 const STATE_MAP = {
@@ -247,6 +256,7 @@ const tableOptions: TableOptions = {
             globalStore.setLoading(false);
             initPose();
             globalStore.closeModal();
+            state.mapName = record.map_name;
           })
           .catch((err) => {
             console.log(err);
@@ -367,7 +377,8 @@ const mapMsgHandler = ({
       data,
     ) as GridMap;
     const wrap = document.getElementById("navigationMap") as HTMLElement;
-    state.drawManage.drawGridMap(wrap, parseData, true);
+    // todo 注释掉，不需要一直更新
+    // state.drawManage.drawGridMap(wrap, parseData, true);
   }
 };
 
@@ -445,6 +456,7 @@ const planMsgHandler = ({
       state.planSubId,
       data,
     ) as GridPlan;
+    console.log('curve msg', parseData);
     state.drawManage.drawCurve(parseData);
   }
 }
@@ -476,6 +488,7 @@ const patrolManage = () => {
     },
     component: Patrol,
     showFooter: false,
+    width: 650,
   });
 }
 

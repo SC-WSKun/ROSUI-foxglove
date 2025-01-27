@@ -27,6 +27,7 @@ export default class DrawManage {
   labelWrap: HTMLElement | null = null;
   patrolWrap: HTMLElement | null = null;
   planCurveCanvas: HTMLCanvasElement | null = null;
+  testPlanCurveCanvas: HTMLElement | null = null;
   vwDrawer: VirtualWall | null = null;
   scanPoints: HTMLElement[] = [];
   addingNav: boolean = false;
@@ -107,7 +108,7 @@ export default class DrawManage {
         this.globalStore.updateTransform(parseData.transforms);
       } else if (subscriptionId === this.scanSubId) {
         const time = new Date().getTime();
-        if (time - this.scanPointsTime < 1000) return;
+        if (time - this.scanPointsTime < 100) return;
         this.scanPointsTime = time;
         const parseData = this.foxgloveClientStore.readMsgWithSubId(
           subscriptionId,
@@ -281,7 +282,7 @@ export default class DrawManage {
     for (let idx = 0; idx < poses.length; idx++) {
       if (!this.mapInfo) return;
       const { pose: { position } } = poses[idx];
-      const { x, y } = worldCoordinateToPixel(
+      let { x, y } = worldCoordinateToPixel(
         position.x,
         position.y,
         this.scale,
@@ -289,25 +290,24 @@ export default class DrawManage {
         this.mapInfo.origin.position.x,
         this.mapInfo.origin.position.y
       );
+      y = this.imgWrap.offsetHeight - y;
       if (idx === 0) {
         offsetX = x - carX;
         offsetY = y - carY;
         ctx.moveTo(carX, carY);
-        ctx.arc(carX, carY, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'red';
-        ctx.fill();
-      }
-      else ctx.lineTo(x - offsetX, y - offsetY);
+        ctx.lineTo(x - offsetX, y - offsetY);
+      } else if (idx < poses.length - 1) ctx.lineTo(x, y);
+      else ctx.arc(x, y, 2, 0, Math.PI * 2);
     }
-    ctx.strokeStyle = 'blue';
+    ctx.strokeStyle = 'grey';
     ctx.lineWidth = 2;
     ctx.stroke();
   }
 
-  startPatrol() {
+  startPatrol(loopCount: number = 1) {
     if (this.imgWrap && this.patrolWrap) this.imgWrap.removeChild(this.patrolWrap);
     this.patrolWrap = null;
-    this.patrolStore?.patrol();
+    this.patrolStore?.patrol(loopCount);
   }
 
   exitPatrolMode() {
@@ -627,8 +627,8 @@ export default class DrawManage {
     if (!this.pointsWrap) {
       this.pointsWrap = document.createElement("div");
       this.pointsWrap.className = "points-wrap";
+      this.imgWrap.appendChild(this.pointsWrap);
     }
-    this.imgWrap.appendChild(this.pointsWrap);
     // 清除之前的红点
     this.pointsWrap.innerHTML = "";
     points.forEach((point: { x: number; y: number } | null) => {
