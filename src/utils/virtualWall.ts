@@ -23,8 +23,6 @@ export class VirtualWall {
   isDrawing = false;
   lines: ILine[] = [];
   revokeHistory: Uint8Array[] = [];
-  x = 0;
-  y = 0;
   // moudeDown位置
   startX = 0;
   startY = 0;
@@ -61,8 +59,6 @@ export class VirtualWall {
       // 存储压缩数据
       this.save();
 
-      this.x = event.layerX;
-      this.y = event.layerY;
       this.startX = event.layerX;
       this.startY = event.layerY;
       this.isDrawing = true;
@@ -70,7 +66,13 @@ export class VirtualWall {
 
     this.canvas?.addEventListener('mousemove', (event: any) => {
       if (event.button !== MOUSE_LEFT_BUTTON || !this.isDrawing || !this.canvas) return;
-      this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
+
+      // 避免绘制中鼠标移出canvas界限导致绘制异常
+      if (event.layerX < 5 || event.layerX >= this.canvas.width - 5
+        || event.layerY < 5 || event.layerY >= this.canvas.height - 5
+      ) return this.isDrawing = false;
+      
+      this.drawLine(ctx, this.startX, this.startY, event.layerX, event.layerY);
     });
   }
 
