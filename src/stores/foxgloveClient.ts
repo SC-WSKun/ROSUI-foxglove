@@ -196,16 +196,20 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     return new Promise((resolve) => {
       // 将监听回调函数抽离的目的是避免监听未及时off造成的内存泄漏
       function serviceResponseHandler(response: any) {
-        const parseResDefinitions = parseMessageDefinition(
-          srv?.responseSchema!,
-          {
-            ros2: true
-          }
-        )
-        const reader = new MessageReader(parseResDefinitions)
-        const res = reader.readMessage(response.data)
-        resolve(res)
-        state.client?.off('serviceCallResponse', serviceResponseHandler)
+        try {
+          const parseResDefinitions = parseMessageDefinition(
+            srv?.responseSchema!,
+            {
+              ros2: true
+            }
+          )
+          const reader = new MessageReader(parseResDefinitions)
+          const res = reader.readMessage(response.data)
+          resolve(res)
+          state.client?.off('serviceCallResponse', serviceResponseHandler)
+        } catch (err) {
+          console.error(err);
+        }
       }
       state!.client!.on('serviceCallResponse', serviceResponseHandler)
     })

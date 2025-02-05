@@ -4,7 +4,8 @@ const setBtnsDisable = (el: Element, disabled: boolean) => {
   const btns = el.querySelectorAll('button');
   btns.forEach((btn: HTMLButtonElement) => {
     const notDisabled = !!btn.getAttribute('data-notDisable');
-    btn.disabled = notDisabled || disabled;
+    if (notDisabled) btn.disabled = false;
+    else btn.disabled = disabled;
   });
 }
 
