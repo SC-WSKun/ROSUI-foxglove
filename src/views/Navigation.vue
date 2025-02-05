@@ -494,10 +494,6 @@ const patrolManage = () => {
   });
 }
 
-setTimeout(() => {
-  patrolManage();
-}, 1000);
-
 // 跨图导航
 const crossNav = () => {
   state.crossing = true;
