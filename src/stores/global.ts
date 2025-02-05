@@ -122,6 +122,7 @@ type GlobalState = {
 
 class GlobalStore {
   state: GlobalState;
+  robotID: string;
   constructor(){
     this.state = reactive<GlobalState>({
       loading: false,
@@ -150,6 +151,10 @@ class GlobalStore {
 
   setConnected(connected: boolean) {
     this.state.connected = connected;
+  }
+
+  setRobotID(robotID: string) {
+    this.robotID = robotID;
   }
 
   isConnected() {

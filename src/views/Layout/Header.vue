@@ -1,45 +1,24 @@
 <template>
   <div class="Header">
     <div class="Header-logo" @click="onClickLogo">
-      <img src="/robot.png" />
-      RosUI-Foxglove
+      <img src="/robot-logo.png" />
+      ROS 2 HMI
     </div>
-    <div class="Header-info">
-      <a-dropdown v-if="menus.length">
-        <a class="ant-dropdown-link" @click.prevent>
-          操作
-          <DownOutlined :style="{ fontSize: '12px' }" />
-        </a>
-        <template #overlay>
-          <a-empty v-if="!menus.length" :image="emptyImage" description="no data" :image-style="{
-            margin: '30px 40px',
-            marginBottom: '10px'
-          }"></a-empty>
-          <a-menu @click="handleMenuClick" v-else>
-            <a-menu-item v-for="item in menus" :key="item.key">
-              <span>{{ item.text }}</span>
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
+    <div class="Header-btns">
+      <span @click="handleWifiConnext">Wifi配网</span>
+      <span @click="handleDisconnect">断开连接</span>
+      [{{ globalStore.robotID }}]
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {
-  LogoutOutlined,
-  DownOutlined,
-  RobotOutlined
-} from '@ant-design/icons-vue'
 import { Empty, message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 import { useGlobalStore } from '@/stores/global'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { useRtcClientStore } from '@/stores/rtcClient'
-import type P2PSocket from '@/utils/p2psocket'
 import Wifi from '@/components/Wifi.vue';
-import CreateRobot from '@/components/CreateRobot.vue'
 
 const router = useRouter()
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
@@ -48,94 +27,6 @@ const foxgloveClientStore = useFoxgloveClientStore()
 const rtcClientStore = useRtcClientStore()
 
 let connectTimer: NodeJS.Timeout | null = null
-
-const menus: any[] = [
-  {
-    key: 'connect',
-    text: '连接机器人'
-  },
-  {
-    key: 'disconnect',
-    text: '断开连接'
-  },
-  {
-    key: 'wifiConnect',
-    text: 'wifi配网连接'
-  },
-  {
-    key: 'create',
-    text: '创建机器人'
-  }
-]
-// 处理菜单点击事件
-const handleMenuClick = ({ key }: { key: string }) => {
-  switch (key) {
-    case 'connect':
-      handleConnect()
-      break
-    case 'disconnect':
-      handleDisconnect()
-      break
-    case 'wifiConnect':
-      handleWifiConnext()
-      break;
-    case 'create':
-      handleCreateRobot()
-      break;
-    default:
-      break
-  }
-}
-
-// 处理连接操作
-const handleConnect = () => {
-  if (globalStore.state.connected) {
-    message.warning('已经连接机器人，无需重复连接')
-    return
-  }
-  globalStore.state.modalRef.openModal({
-    title: '连接机器人',
-    type: 'form',
-    width: 600,
-    formOptions: {
-      items: [
-        {
-          label: '机器人ID',
-          key: 'id',
-          type: 'input',
-          placeholder: '请输入机器人ID',
-          required: true,
-          defaultValue: () => 'robot_02'
-        }
-      ]
-    },
-    doneMsg: '连接成功',
-    callback: async (record: any) => {
-      return new Promise(async (resolve, reject) => {
-        globalStore.setLoading(true, '连接中')
-        const start = new Date().getTime()
-        connectTimer = setInterval(() => {
-          const end = new Date().getTime()
-          if (end - start > 1000 * 30) {
-            if (connectTimer)
-              clearInterval(connectTimer)
-            connectTimer = null
-            globalStore.setLoading(false)
-            rtcClientStore.closeRtcClient()
-            reject('连接超时，请确认ID是否正确')
-          }
-        })
-        const socket: P2PSocket = await rtcClientStore.initRtcClient(record.id)
-        clearInterval(connectTimer)
-        connectTimer = null
-        foxgloveClientStore.initClient(socket)
-        globalStore.setLoading(false)
-        globalStore.setConnected(true)
-        resolve('连接成功')
-      })
-    }
-  })
-}
 
 // 处理断开连接操作
 const handleDisconnect = () => {
@@ -157,15 +48,6 @@ const handleWifiConnext = () => {
   });
 }
 
-const handleCreateRobot = () => {
-  globalStore.openModal({
-    title: "创建机器人",
-    type: "custom",
-    component: CreateRobot,
-    showFooter: false,
-  });
-}
-
 const onClickLogo = () => {
   router.push('/')
 }
@@ -176,13 +58,12 @@ const onClickLogo = () => {
   width: 100vw;
   height: @header-height;
   min-width: 800px;
-  // background-color: @theme-color1;
-  background: linear-gradient(180deg, @gradient-color1, @gradient-color2);
+  background-color: #5b63d3;
   .flex(space-between);
   padding: 0 30px;
 
   &-logo {
-    height: 100%;
+    height: 75%;
     color: #000;
     font-size: @font-size-large;
     font-weight: bold;
@@ -191,14 +72,18 @@ const onClickLogo = () => {
 
     img {
       height: 100%;
+      margin-right: 10px;
     }
   }
 
-  &-info {
-    .flex();
-
-    .logout {
-      color: @white-font-color;
+  &-btns {
+    span {
+      cursor: pointer;
+      padding: 8px 15px;
+      border-radius: 5px;
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
     }
   }
 }

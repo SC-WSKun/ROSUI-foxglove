@@ -31,10 +31,10 @@ const router = createRouter({
         }
       ]
     },
-
     {
       path: '/',
-      redirect: '/dashboard/build'
+      name: 'index',
+      component: () => import('../views/index.vue'),
     }
   ]
 })
