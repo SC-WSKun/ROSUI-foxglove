@@ -59,7 +59,7 @@ export default class DrawManage {
     yaw: number;
   } | null = null;
   carRenderLock: boolean = false;
-  clearCurveTimer: number | null = null;
+  clearCurveTimer: any = null;
 
   navDisabled: boolean = false;
   labelDisabled: boolean = false;

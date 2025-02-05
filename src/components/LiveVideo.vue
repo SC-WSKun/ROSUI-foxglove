@@ -1,16 +1,19 @@
 <template>
   <div>
     <video id="video"></video>
+    <a-button @click="openPip" :disabled="pipBtnDisabled" type="primary">开启画中画</a-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRtcClientStore } from '../stores/rtcClient'
 import { useGlobalStore } from '../stores/global'
+import { message } from "ant-design-vue";
 
 const rtcClientStore = useRtcClientStore()
 const globalStore = useGlobalStore()
+const pipBtnDisabled = ref(true);
 
 watch(
   () => globalStore.state.connected,
@@ -48,6 +51,27 @@ const closeVideo = () => {
     video.autoplay = false
   }
 }
+
+const openPip = async () => {
+  const picVideo = document.querySelector('#video')!;
+  try {
+    // @ts-ignore
+    picVideo.requestPictureInPicture().then(() => {
+      console.log('进入画中画模式');
+    });
+  } catch (error) {
+    message.error('当前浏览器不支持画中画功能');
+    console.error(error);
+  }
+}
+
+onMounted(() => {
+  const video: HTMLVideoElement | null = document.querySelector('#video');
+  if (!video) return;
+  video.addEventListener('loadedmetadata', () => {
+    pipBtnDisabled.value = false;
+  });
+})
 </script>
 
 <style lang="less" scoped>
