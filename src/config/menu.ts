@@ -12,7 +12,7 @@ export default [
     path: '/dashboard/navigation'
   },
   {
-    label: '虚拟墙管理',
+    label: '绘制虚拟墙',
     key: 'virtualWall',
     path: '/dashboard/virtualWall'
   },

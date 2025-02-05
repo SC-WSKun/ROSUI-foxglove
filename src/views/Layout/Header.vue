@@ -7,7 +7,7 @@
     <div class="Header-btns">
       <span @click="handleWifiConnext">Wifi配网</span>
       <span @click="handleDisconnect">断开连接</span>
-      [{{ globalStore.robotID }}]
+      【{{ globalStore.robotID }}】
     </div>
   </div>
 </template>

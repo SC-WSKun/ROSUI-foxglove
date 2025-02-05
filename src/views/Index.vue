@@ -39,7 +39,7 @@ const foxgloveClientStore = useFoxgloveClientStore();
 const rtcClientStore = useRtcClientStore();
 const router = useRouter();
 
-const robotID = ref('robot_02');
+const robotID = ref('robot_04');
 let connectTimer: any = null;
 
 const connect = () => {
@@ -56,6 +56,7 @@ const connect = () => {
           clearInterval(connectTimer);
         connectTimer = null;
         globalStore.setLoading(false);
+        reject('');
         rtcClientStore.closeRtcClient();
       }
     })
@@ -66,6 +67,7 @@ const connect = () => {
     globalStore.setLoading(false);
     globalStore.setConnected(true);
     globalStore.setRobotID(robotID.value);
+    resolve('');
   }).then(() => {
     message.success('连接成功');
     router.push('/dashboard/virtualWall');

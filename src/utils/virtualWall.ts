@@ -23,9 +23,12 @@ export class VirtualWall {
   isDrawing = false;
   lines: ILine[] = [];
   revokeHistory: Uint8Array[] = [];
-  // moudeDown位置
+  // mouseDown位置
   startX = 0;
   startY = 0;
+  endX = 0;
+  endY = 0;
+
   scale:number = 1;
   mapInfo: MapInfo | null = null;
 
@@ -71,9 +74,14 @@ export class VirtualWall {
       if (event.layerX < 5 || event.layerX >= this.canvas.width - 5
         || event.layerY < 5 || event.layerY >= this.canvas.height - 5
       ) return this.isDrawing = false;
-      
+      this.endX = event.layerX;
+      this.endY = event.layerY;
       this.drawLine(ctx, this.startX, this.startY, event.layerX, event.layerY);
     });
+
+    this.canvas.addEventListener('mouseup', (event: any) => {
+      this.isDrawing = false;
+    })
   }
 
   drawLine(
@@ -116,6 +124,12 @@ export class VirtualWall {
     const imageData = ctx.getImageData(0, 0, this.canvas!.width, this.canvas!.height);
     const compressed = pako.deflate(new Uint8Array(imageData.data));
     this.revokeHistory.push(compressed);
+    this.lines.push({
+      x0: this.startX,
+      y0: this.startY,
+      x1: this.endX,
+      y1: this.endY,
+    });
   }
 
   clear() {
