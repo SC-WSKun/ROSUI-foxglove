@@ -257,15 +257,13 @@ export default class DrawManage {
 
   // 轨迹曲线
   drawCurve(data: GridPlan) {
-    if (this.clearCurveTimer) {
-      clearTimeout(this.clearCurveTimer);
-      // 1s内没接收到轨迹消息则清除轨迹
-      this.clearCurveTimer = setTimeout(() => {
-        if (!this.planCurveCanvas) return;
-        const ctx = this.planCurveCanvas.getContext('2d')!;
-        ctx.clearRect(0, 0, this.planCurveCanvas.width, this.planCurveCanvas.height);
-      }, 1000);
-    }
+    if (this.clearCurveTimer) clearTimeout(this.clearCurveTimer);
+    // 1s内没接收到轨迹消息则清除轨迹
+    this.clearCurveTimer = setTimeout(() => {
+      if (!this.planCurveCanvas) return;
+      const ctx = this.planCurveCanvas.getContext('2d')!;
+      ctx.clearRect(0, 0, this.planCurveCanvas.width, this.planCurveCanvas.height);
+    }, 1000);
     if (!this.mapInfo || !this.imgWrap || !this.img) return;
     if (!this.planCurveCanvas) {
       this.planCurveCanvas = document.createElement("canvas");
