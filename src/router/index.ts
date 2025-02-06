@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Dashboard from '@/views/Dashboard.vue'
+import { useGlobalStore } from '@/stores/global'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -38,5 +39,14 @@ const router = createRouter({
     }
   ]
 })
+
+router.beforeEach((to, from, next) => {
+  if (to.name === 'index') next();
+  else {
+    const globalStore = useGlobalStore();
+    if (globalStore.robotID !== '') next();
+    else next({ name: 'index' });
+  }
+});
 
 export default router
