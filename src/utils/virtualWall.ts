@@ -58,10 +58,6 @@ export class VirtualWall {
 
     this.canvas.addEventListener("mousedown", (event: any) => {
       if (!this.canvas || event.button !== MOUSE_LEFT_BUTTON) return;
-
-      // 存储压缩数据
-      this.save();
-
       this.startX = event.layerX;
       this.startY = event.layerY;
       this.isDrawing = true;
@@ -81,6 +77,7 @@ export class VirtualWall {
 
     this.canvas.addEventListener('mouseup', (event: any) => {
       this.isDrawing = false;
+      this.save();
     })
   }
 
@@ -119,17 +116,19 @@ export class VirtualWall {
     }
   }
 
-  save() {
+  save({ saveLine = true }) {
     const ctx = this.canvas!.getContext('2d')!;
     const imageData = ctx.getImageData(0, 0, this.canvas!.width, this.canvas!.height);
     const compressed = pako.deflate(new Uint8Array(imageData.data));
     this.revokeHistory.push(compressed);
-    this.lines.push({
-      x0: this.startX,
-      y0: this.startY,
-      x1: this.endX,
-      y1: this.endY,
-    });
+    if (saveLine) {
+      this.lines.push({
+        x0: this.startX,
+        y0: this.startY,
+        x1: this.endX,
+        y1: this.endY,
+      });
+    }
   }
 
   clear() {
