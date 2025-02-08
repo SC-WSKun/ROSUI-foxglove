@@ -31,6 +31,7 @@ import { useGlobalStore } from '@/stores/global';
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient';
 import { useRtcClientStore } from '@/stores/rtcClient';
 import type P2PSocket from '@/utils/p2psocket';
+import { getPipWindow } from '@/utils/pipWindow';
 import CreateRobot from '@/components/CreateRobot.vue';
 
 
@@ -43,36 +44,47 @@ const robotID = ref('robot_04');
 let connectTimer: any = null;
 
 const connect = () => {
-  if (robotID.value === '') {
-    return;
-  }
-  new Promise(async (resolve, reject) => {
-    globalStore.setLoading(true, '连接中');
-    const start = new Date().getTime();
-    connectTimer = setInterval(() => {
-      const end = new Date().getTime();
-      if (end - start > 1000 * 30) {
-        if (connectTimer)
-          clearInterval(connectTimer);
-        connectTimer = null;
-        globalStore.setLoading(false);
-        reject('');
-        rtcClientStore.closeRtcClient();
-      }
-    })
-    const socket: P2PSocket = await rtcClientStore.initRtcClient(robotID.value);
-    clearInterval(connectTimer);
-    connectTimer = null;
-    foxgloveClientStore.initClient(socket);
-    globalStore.setLoading(false);
-    globalStore.setConnected(true);
-    globalStore.setRobotID(robotID.value);
-    resolve('');
-  }).then(() => {
-    message.success('连接成功');
-    router.push('/dashboard/virtualWall');
-  }, () => {
-    message.error('连接超时，请确认ID是否正确');
+  // if (robotID.value === '') {
+  //   return;
+  // }
+  // new Promise(async (resolve, reject) => {
+  //   globalStore.setLoading(true, '连接中');
+  //   const start = new Date().getTime();
+  //   connectTimer = setInterval(() => {
+  //     const end = new Date().getTime();
+  //     if (end - start > 1000 * 30) {
+  //       if (connectTimer)
+  //         clearInterval(connectTimer);
+  //       connectTimer = null;
+  //       globalStore.setLoading(false);
+  //       reject('');
+  //       rtcClientStore.closeRtcClient();
+  //     }
+  //   })
+  //   const socket: P2PSocket = await rtcClientStore.initRtcClient(robotID.value);
+  //   clearInterval(connectTimer);
+  //   connectTimer = null;
+  //   foxgloveClientStore.initClient(socket);
+  //   globalStore.setLoading(false);
+  //   globalStore.setConnected(true);
+  //   globalStore.setRobotID(robotID.value);
+  //   resolve('');
+  // }).then(() => {
+  //   message.success('连接成功');
+  //   router.push('/dashboard/virtualWall');
+  // }, () => {
+  //   message.error('连接超时，请确认ID是否正确');
+  // });
+
+  // test
+  new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve('1');
+    }, 2000);
+  }).then(res => {
+    const pipWindow = getPipWindow();
+    pipWindow.init();
+    router.push('/dashboard/navigation');
   });
 };
 

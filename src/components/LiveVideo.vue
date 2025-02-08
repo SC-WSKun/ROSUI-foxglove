@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="!pipWindow.fullSupport">
     <video id="video"></video>
     <a-button @click="openPip" :disabled="pipBtnDisabled" type="primary">开启画中画</a-button>
   </div>
@@ -10,9 +10,11 @@ import { onMounted, ref, watch } from 'vue'
 import { useRtcClientStore } from '../stores/rtcClient'
 import { useGlobalStore } from '../stores/global'
 import { message } from "ant-design-vue";
+import { getPipWindow } from '@/utils/pipWindow';
 
-const rtcClientStore = useRtcClientStore()
-const globalStore = useGlobalStore()
+const rtcClientStore = useRtcClientStore();
+const globalStore = useGlobalStore();
+const pipWindow = getPipWindow();
 const pipBtnDisabled = ref(true);
 
 watch(

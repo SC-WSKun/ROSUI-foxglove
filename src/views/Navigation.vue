@@ -1,7 +1,71 @@
 <template>
   <div class="navigation">
+    <div id="videoContainer">
+      <LiveVideo />
+    </div>
+    <div class="btns">
+      <!-- 0. 等待用户获取地图列表 -->
+      <div class="btn" v-if="state.curState === 0">
+        <a-button @click="selectMap" type="primary">选择地图</a-button>
+      </div>
+      <!-- 1. 预览 -->
+      <div class="btn" v-if="state.curState === 1">
+        <a-button @click="initPose">指定初始位姿</a-button>
+      </div>
+      <!-- 2. 指定初始位姿 -->
+      <div class="btn" v-if="state.curState === 2">
+        <a-button type="primary" @click="finishAdding"> 完成 </a-button>
+        <a-button @click="cancelInitPose">取消</a-button>
+      </div>
+      <!-- 3. 导航 -->
+      <div class="btn" v-if="state.curState === 3">
+        <a-button type="primary">实时画面及摇杆</a-button>
+        <a-button @click="connectMap">连接地图</a-button>
+        <div class="switch">
+          <a-switch v-model:checked="state.navigating"></a-switch>导航模式
+        </div>
+        <div class="switch">
+          <a-switch v-model:checked="state.marking"></a-switch>标点模式
+        </div>
+        <div class="switch" v-show="state.marking">
+          <a-switch v-model:checked="patrolStore.patrolMode"></a-switch>巡逻模式
+        </div>
+        <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
+        <a-button @click="crossNav" type="primary">跨图导航</a-button>
+        <a-button
+          @click="pauseNav"
+          type="primary"
+          :icon="h(PauseOutlined)"
+          danger
+          >暂停导航</a-button
+        >
+      </div>
+      <!-- 4. 暂停导航 -->
+      <div class="btn" v-if="state.curState === 4">
+        <a-button
+          @click="resumeNav"
+          type="primary"
+          :icon="h(CaretRightOutlined)"
+          >恢复导航</a-button
+        >
+        <a-button @click="selectMap">重新选择地图</a-button>
+        <a-button
+          @click="closeNav"
+          :icon="h(StopOutlined)"
+          type="primary"
+          danger
+          >结束导航</a-button
+        >
+      </div>
+      <!-- 5. 连接地图 -->
+      <div class="btn" v-if="state.curState === 5">
+        <a-button @click="confirmConnect" type="primary">确认连接</a-button>
+        <a-button @click="cancelConnect">取消连接操作</a-button>
+      </div>
+      <JoyStick v-if="globalStore.state.connected" :mode="state.curState >= 3"></JoyStick>
+    </div>
     <div class="view" id="navigationMap">
-      <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
+      <div class="tips" v-if="state.curState === 0">请先选择地图</div>
       <div id="mapImgWrap">
         <VirtualWallCom
           v-if="state.curState > 0"
@@ -10,80 +74,6 @@
           style="pointer-events: none;"
         />
       </div>
-    </div>
-    <div class="config">
-      <a-card
-        title="实时画面"
-        :bordered="false"
-        style="width: 100%; height: 100%"
-      >
-        <LiveVideo />
-      </a-card>
-      <a-card
-        title="操作栏"
-        :bordered="false"
-        style="width: 100%; height: 100%"
-        v-disable="patroling"
-      >
-        <!-- 0. 等待用户获取地图列表 -->
-        <div class="btn" v-if="state.curState === 0">
-          <a-button @click="selectMap" type="primary">选择地图</a-button>
-        </div>
-        <!-- 1. 预览 -->
-        <div class="btn" v-if="state.curState === 1">
-          <a-button @click="initPose">指定初始位姿</a-button>
-        </div>
-        <!-- 2. 指定初始位姿 -->
-        <div class="btn" v-if="state.curState === 2">
-          <a-button type="primary" @click="finishAdding"> 完成 </a-button>
-          <a-button @click="cancelInitPose">取消</a-button>
-        </div>
-        <!-- 3. 导航 -->
-        <div class="btn" v-if="state.curState === 3">
-          <a-button @click="connectMap">连接地图</a-button>
-          <div class="switch">
-            <a-switch v-model:checked="state.navigating"></a-switch>导航模式
-          </div>
-          <div class="switch">
-            <a-switch v-model:checked="state.marking"></a-switch>标点模式
-          </div>
-          <div class="switch" v-show="state.marking">
-            <a-switch v-model:checked="patrolStore.patrolMode"></a-switch>巡逻模式
-          </div>
-          <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
-          <a-button @click="crossNav" type="primary">跨图导航</a-button>
-          <a-button
-            @click="pauseNav"
-            type="primary"
-            :icon="h(PauseOutlined)"
-            danger
-            >暂停导航</a-button
-          >
-        </div>
-        <!-- 4. 暂停导航 -->
-        <div class="btn" v-if="state.curState === 4">
-          <a-button
-            @click="resumeNav"
-            type="primary"
-            :icon="h(CaretRightOutlined)"
-            >恢复导航</a-button
-          >
-          <a-button @click="selectMap">重新选择地图</a-button>
-          <a-button
-            @click="closeNav"
-            :icon="h(StopOutlined)"
-            type="primary"
-            danger
-            >结束导航</a-button
-          >
-        </div>
-        <!-- 5. 连接地图 -->
-        <div class="btn" v-if="state.curState === 5">
-          <a-button @click="confirmConnect" type="primary">确认连接</a-button>
-          <a-button @click="cancelConnect">取消连接操作</a-button>
-        </div>
-        <JoyStick v-if="globalStore.state.connected" :mode="state.curState >= 3"></JoyStick>
-      </a-card>
     </div>
     <a-modal
       v-model:open="globalStore.state.showLabelInput"
@@ -652,6 +642,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   gap: 15px;
 
   .view {
