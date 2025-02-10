@@ -13,30 +13,29 @@
 </template>
 
 <script setup lang="ts">
-import { Empty, message } from 'ant-design-vue'
-import { useRouter } from 'vue-router'
-import { useGlobalStore } from '@/stores/global'
-import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
-import { useRtcClientStore } from '@/stores/rtcClient'
+import { Empty, message } from 'ant-design-vue';
+import { useRouter } from 'vue-router';
+import { useGlobalStore } from '@/stores/global';
+import { useFoxgloveClientStore } from '@/stores/foxgloveClient';
+import { useRtcClientStore } from '@/stores/rtcClient';
 import Wifi from '@/components/Wifi.vue';
 
-const router = useRouter()
-const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
-const globalStore = useGlobalStore()
-const foxgloveClientStore = useFoxgloveClientStore()
-const rtcClientStore = useRtcClientStore()
-
-let connectTimer: NodeJS.Timeout | null = null
+const router = useRouter();
+const globalStore = useGlobalStore();
+const foxgloveClientStore = useFoxgloveClientStore();
+const rtcClientStore = useRtcClientStore();
 
 // 处理断开连接操作
 const handleDisconnect = () => {
-  if (!globalStore.state.connected) {
-    message.warning('未连接机器人，无需断开连接')
-    return
-  }
-  foxgloveClientStore.closeClient()
-  rtcClientStore.closeRtcClient()
-  globalStore.setConnected(false)
+  // if (!globalStore.state.connected) {
+  //   message.warning('未连接机器人，无需断开连接');
+  //   return;
+  // }
+  foxgloveClientStore.closeClient();
+  rtcClientStore.closeRtcClient();
+  globalStore.setConnected(false);
+  globalStore.setRobotID('');
+  router.push('/');
 }
 
 const handleWifiConnext = () => {
@@ -49,7 +48,7 @@ const handleWifiConnext = () => {
 }
 
 const onClickLogo = () => {
-  router.push('/')
+  router.push('/');
 }
 </script>
 

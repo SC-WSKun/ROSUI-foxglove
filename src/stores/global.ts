@@ -1,4 +1,5 @@
 import { reactive } from "vue";
+import { useRouter } from 'vue-router';
 import { defineStore } from "pinia";
 import type { ModalOptions } from "@/typings/component";
 import type { Transform } from "@/typings";
@@ -119,10 +120,9 @@ type GlobalState = {
 //     closeLabelInput,
 //   };
 // });
-
 class GlobalStore {
   state: GlobalState;
-  robotID: string = '';
+  robotID: string = 'robot_04';
   constructor(){
     this.state = reactive<GlobalState>({
       loading: false,
