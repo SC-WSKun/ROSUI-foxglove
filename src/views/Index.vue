@@ -3,7 +3,7 @@
     <div class="center">
       <div class="logo">
         <img src="/robot-logo.png" />
-        <h1>Ros 2 HMI</h1>
+        <h1>Ros2 HRI</h1>
       </div>
       <a-form>
         <a-form-item

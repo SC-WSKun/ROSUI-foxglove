@@ -2,7 +2,7 @@
   <div class="Header">
     <div class="Header-logo" @click="onClickLogo">
       <img src="/robot-logo.png" />
-      ROS 2 HMI
+      ROS2 HRI
     </div>
     <div class="Header-btns">
       <span @click="handleWifiConnext">Wifi配网</span>
