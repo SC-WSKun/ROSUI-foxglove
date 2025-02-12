@@ -11,6 +11,7 @@
     "type-check": "vue-tsc --build --force"
   },
   "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
     "@foxglove/rosmsg": "^5.0.2",
     "@foxglove/rosmsg2-serialization": "^2.0.3",
     "@foxglove/ws-protocol": "^0.7.2",

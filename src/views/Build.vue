@@ -1,26 +1,7 @@
 <template>
   <div class="build">
-    <div class="view" id="buildMap">
-      <div
-        class="tips"
-        v-if="state.curState === 0 || !globalStore.isConnected()"
-      >
-        暂未建图，点击右侧开始建图
-      </div>
-    </div>
-    <div class="config">
-      <a-card
-        title="实时画面"
-        :bordered="false"
-        style="width: 100%; height: 100%"
-      >
-        <LiveVideo />
-      </a-card>
-      <a-card
-        title="操作栏"
-        :bordered="false"
-        style="width: 100%; height: 100%;"
-      >
+    <TopNav :showJoyStick="globalStore.state.connected" :mode="state.curState >= 1">
+      <div class="btns">
         <!-- 建图前 -->
         <div class="btn" v-if="state.curState === 0">
           <a-button
@@ -32,21 +13,25 @@
           </a-button>
         </div>
         <!-- 建图中 -->
-        <div class="btn" v-if="state.curState === 1">
-          <a-button
-            @click="switchBuild"
-            type="primary"
-            :icon="h(PauseOutlined)"
-            danger
-          >
-            暂停建图
-          </a-button>
-          <div class="switch">
-            <a-switch
-              v-model:checked="state.navigating"
-              @change="switchNavigation"
-            ></a-switch
-            >导航模式
+        <div v-if="state.curState === 1">
+          <div class="btn-line">
+            <a-button
+              @click="switchBuild"
+              type="primary"
+              :icon="h(PauseOutlined)"
+              danger
+            >
+              暂停建图
+            </a-button>
+          </div>
+          <div class="btn-line">
+            <div class="switch">
+              <a-switch
+                v-model:checked="state.navigating"
+                @change="switchNavigation"
+              ></a-switch
+              >导航模式
+            </div>
           </div>
         </div>
         <!-- 建图后 -->
@@ -70,28 +55,36 @@
             >结束建图</a-button
           >
         </div>
-        <JoyStick v-if="globalStore.state.connected" :mode="state.curState >= 1"></JoyStick>
-      </a-card>
+      </div>
+    </TopNav>
+    <div class="view" id="buildMap">
+      <div
+        class="tips"
+        v-if="state.curState === 0 || !globalStore.isConnected()"
+      >
+        请点击开始建图
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, h, onBeforeUnmount, watch } from 'vue'
+import { reactive, h, onBeforeUnmount, watch } from 'vue';
 import {
   CaretRightOutlined,
   PauseOutlined,
   SaveOutlined,
   StopOutlined
-} from '@ant-design/icons-vue'
-import { message, notification } from 'ant-design-vue'
-import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
-import { useGlobalStore } from '@/stores/global'
-import type { MessageData } from '@foxglove/ws-protocol'
-import type { GridMap, serviceResponse } from '@/typings'
-import DrawManage from '@/utils/draw'
-import _ from 'lodash'
-import { useRtcClientStore } from '@/stores/rtcClient'
+} from '@ant-design/icons-vue';
+import { message, notification } from 'ant-design-vue';
+import { useFoxgloveClientStore } from '@/stores/foxgloveClient';
+import { useGlobalStore } from '@/stores/global';
+import type { MessageData } from '@foxglove/ws-protocol';
+import type { GridMap, serviceResponse } from '@/typings';
+import DrawManage from '@/utils/draw';
+import _ from 'lodash';
+import { useRtcClientStore } from '@/stores/rtcClient';
+import TopNav from '@/components/TopNav.vue';
 
 interface State {
   mapSubId: number
@@ -353,6 +346,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   gap: 15px;
 
   .view {
@@ -368,23 +362,21 @@ onBeforeUnmount(() => {
     }
   }
 
-  .config {
-    width: 35%;
-    height: 100%;
-    overflow: auto;
-    .flex(center, center, column);
-    gap: 15px;
+  .btn-line {
+    .flex;
+    justify-content: initial;
+    gap: 10px;
+    min-height: 32px;
+  }
 
-    .btn {
-      width: 100%;
-      .flex(center, center);
-      gap: 10px;
-      .switch {
-        .flex;
-        gap: 5px;
-      }
+  .btn {
+    width: 100%;
+    .flex(center, center);
+    gap: 10px;
+    .switch {
+      .flex;
+      gap: 5px;
     }
-    // }
   }
 }
 </style>

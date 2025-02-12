@@ -1,4 +1,5 @@
 import { reactive } from "vue";
+import { useRouter } from 'vue-router';
 import { defineStore } from "pinia";
 import type { ModalOptions } from "@/typings/component";
 import type { Transform } from "@/typings";
@@ -119,9 +120,9 @@ type GlobalState = {
 //     closeLabelInput,
 //   };
 // });
-
 class GlobalStore {
   state: GlobalState;
+  robotID: string = '';
   constructor(){
     this.state = reactive<GlobalState>({
       loading: false,
@@ -150,6 +151,10 @@ class GlobalStore {
 
   setConnected(connected: boolean) {
     this.state.connected = connected;
+  }
+
+  setRobotID(robotID: string) {
+    this.robotID = robotID;
   }
 
   isConnected() {

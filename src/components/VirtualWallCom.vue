@@ -54,7 +54,7 @@ function drawVWs(canvasWidth: number, canvasHeight: number) {
     canvas = document.createElement('canvas');
     canvas.className = "virtual-wall-canvas";
     canvas.innerHTML = "";
-    vwContainer!.appendChild(canvas);
+    vwContainer?.appendChild(canvas);
   }
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
