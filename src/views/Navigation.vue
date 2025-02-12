@@ -293,13 +293,14 @@ const finishAdding = async () => {
   globalStore.setLoading(true);
   state.drawManage.subscribeCarPosition();
   state.drawManage.subscribeScanPoints();
-  if (!state.connecting && !state.crossing)
+  if (!state.connecting && !state.crossing) {
     await foxgloveClientStore.callService(
       "/tiered_nav_state_machine/switch_mode",
       {
         mode: 2,
       },
     );
+  }
   // 跨图导航
   if (state.crossing) {
     state.selectedMap = state.candidateMap;
@@ -326,6 +327,7 @@ const finishAdding = async () => {
         state.curState = STATE_MAP.NAVIGATING;
         if (state.connecting) state.curState = STATE_MAP.CONNECTING;
         state.drawManage.advertiseNavTopic();
+        state.drawManage.setPanzoomPartialMap();
         state.drawManage.navDisabled = false;
         globalStore.setLoading(false);
         state.selectedMap = state.candidateMap;
