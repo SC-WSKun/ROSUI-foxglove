@@ -175,8 +175,10 @@ export default class DrawManage {
     // imgWrap包含map和arrow
     if (!this.imgWrap) {
       const tempEl = document.getElementById('mapImgWrap');
-      if (!tempEl) this.imgWrap = document.createElement("div");
-      else this.imgWrap = tempEl;
+      if (!tempEl) {
+        this.imgWrap = document.createElement("div");
+        this.imgWrap.id = "mapImgWrap";
+      } else this.imgWrap = tempEl;
       this.imgWrap.style.position = "relative";
       wrap.appendChild(this.imgWrap);
     }
@@ -741,9 +743,20 @@ export default class DrawManage {
 
   // 清空画布
   clear() {
-    this.imgWrap?.remove();
-    this.imgWrap = null;
+    if (this.imgWrap) {
+      this.imgWrap.style.height = "0";
+      this.imgWrap.style.width = "0";
+    }
+    if (this.img) {
+      this.img.remove();
+      this.img = null;
+    }
+    if (this.pointsWrap) {
+      this.pointsWrap.remove();
+      this.pointsWrap = null;
+    }
     this.pzRemoveListener();
+    this.resetPanzoom();
     this.panzoomIns = null;
   }
 
