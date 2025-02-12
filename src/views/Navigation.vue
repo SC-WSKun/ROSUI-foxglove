@@ -1,7 +1,10 @@
 <template>
   <div class="navigation">
     <TopNav :showJoyStick="globalStore.state.connected" :mode="state.curState >= 3">
-      <div class="btns">
+      <div
+        class="btns"
+        v-disable="patroling"
+      >
         <!-- 0. 等待用户获取地图列表 -->
         <div class="btn" v-if="state.curState === 0">
           <a-button @click="selectMap" type="primary">选择地图</a-button>
@@ -128,7 +131,7 @@ interface State {
 const foxgloveClientStore = useFoxgloveClientStore();
 const globalStore = useGlobalStore();
 const patrolStore = usePatrolStore();
-const liveVideo = ref(null);
+const { patroling } = usePatrolStoreToRefs();
 
 const state = reactive<State>({
   maps: [],
