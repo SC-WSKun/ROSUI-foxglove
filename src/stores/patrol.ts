@@ -160,7 +160,7 @@ export const usePatrolStore = defineStore('patrol', () => {
 				subId,
 				data,
 			) as PatrolTopicMsg;
-			drawManage?.patrolUpdateCarPose(parseData);
+			// drawManage?.patrolUpdateCarPose(parseData);
 		}
 	}
 

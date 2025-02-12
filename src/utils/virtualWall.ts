@@ -61,6 +61,7 @@ export class VirtualWall {
       this.startX = event.layerX;
       this.startY = event.layerY;
       this.isDrawing = true;
+      this.saveHistory();
     });
 
     this.canvas?.addEventListener('mousemove', (event: any) => {
@@ -77,7 +78,7 @@ export class VirtualWall {
 
     this.canvas.addEventListener('mouseup', (event: any) => {
       this.isDrawing = false;
-      this.save();
+      this.saveLine();
     })
   }
 
@@ -98,7 +99,12 @@ export class VirtualWall {
   }
 
   revoke({popLine = false, popHistory = true}: {popLine?: boolean, popHistory?: boolean}) {
-    if (this.revokeHistory.length === 0 || !this.canvas) return;
+    if (!this.canvas) return;
+    if (this.revokeHistory.length === 0) {
+      const ctx = this.canvas.getContext("2d");
+      ctx?.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      return;
+    }
     const compressed = popHistory ? this.revokeHistory.pop()! : this.revokeHistory.at(-1);
     try {
       const decompressed = pako.inflate(compressed);
@@ -113,20 +119,24 @@ export class VirtualWall {
       if (popLine) this.lines.pop();
     } catch (err) {
       console.error(err);
+      message.error('撤销失败，请刷新页面');
     }
   }
 
-  save() {
-    const ctx = this.canvas!.getContext('2d')!;
-    const imageData = ctx.getImageData(0, 0, this.canvas!.width, this.canvas!.height);
-    const compressed = pako.deflate(new Uint8Array(imageData.data));
-    this.revokeHistory.push(compressed);
+  saveLine() {
     this.lines.push({
       x0: this.startX,
       y0: this.startY,
       x1: this.endX,
       y1: this.endY,
     });
+  }
+
+  saveHistory() {
+    const ctx = this.canvas!.getContext('2d')!;
+    const imageData = ctx.getImageData(0, 0, this.canvas!.width, this.canvas!.height);
+    const compressed = pako.deflate(new Uint8Array(imageData.data));
+    this.revokeHistory.push(compressed);
   }
 
   clear() {
