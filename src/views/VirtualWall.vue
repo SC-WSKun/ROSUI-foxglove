@@ -1,7 +1,7 @@
 <template>
   <div class="virtualWall">
     <div class="view" id="virtualWallMap">
-      <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
+      <div class="tips" v-if="state.curState === 0">请先选择地图</div>
       <div id="mapImgWrap">
         <VirtualWallCom
           v-if="state.curState > 0"

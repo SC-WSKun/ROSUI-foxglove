@@ -1,30 +1,7 @@
 <template>
   <div class="navigation">
-    <div class="view" id="navigationMap">
-      <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
-      <div id="mapImgWrap">
-        <VirtualWallCom
-          v-if="state.curState > 0"
-          :drawManage="state.drawManage"
-          :mapName="state.mapName"
-          style="pointer-events: none;"
-        />
-      </div>
-    </div>
-    <div class="config">
-      <a-card
-        title="实时画面"
-        :bordered="false"
-        style="width: 100%; height: 100%"
-      >
-        <LiveVideo />
-      </a-card>
-      <a-card
-        title="操作栏"
-        :bordered="false"
-        style="width: 100%; height: 100%"
-        v-disable="patroling"
-      >
+    <TopNav :showJoyStick="globalStore.state.connected" :mode="state.curState >= 3">
+      <div class="btns">
         <!-- 0. 等待用户获取地图列表 -->
         <div class="btn" v-if="state.curState === 0">
           <a-button @click="selectMap" type="primary">选择地图</a-button>
@@ -35,55 +12,67 @@
         </div>
         <!-- 2. 指定初始位姿 -->
         <div class="btn" v-if="state.curState === 2">
-          <a-button type="primary" @click="finishAdding"> 完成 </a-button>
-          <a-button @click="cancelInitPose">取消</a-button>
+          <div class="btn-line">
+            <a-button type="primary" @click="finishAdding"> 完成 </a-button>
+            <a-button @click="cancelInitPose">取消</a-button>
+          </div>
         </div>
         <!-- 3. 导航 -->
         <div class="btn" v-if="state.curState === 3">
           <a-button @click="connectMap">连接地图</a-button>
-          <div class="switch">
-            <a-switch v-model:checked="state.navigating"></a-switch>导航模式
+          <div class="btn-line">
+            <div class="switch"><a-switch v-model:checked="state.navigating"></a-switch>导航模式</div>
+            <a-button @click="crossNav" type="primary">跨图导航</a-button>
+            <a-button
+              @click="pauseNav"
+              type="primary"
+              :icon="h(PauseOutlined)"
+              danger
+              >暂停导航</a-button
+            >
           </div>
-          <div class="switch">
-            <a-switch v-model:checked="state.marking"></a-switch>标点模式
+          <div class="btn-line">
+            <div class="switch"><a-switch v-model:checked="state.marking"></a-switch>标点模式</div>
           </div>
-          <div class="switch" v-show="state.marking">
-            <a-switch v-model:checked="patrolStore.patrolMode"></a-switch>巡逻模式
+          <div class="btn-line" v-show="state.marking">
+            <div class="switch"><a-switch v-model:checked="patrolStore.patrolMode"></a-switch>巡逻模式</div>
+            <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
           </div>
-          <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
-          <a-button @click="crossNav" type="primary">跨图导航</a-button>
-          <a-button
-            @click="pauseNav"
-            type="primary"
-            :icon="h(PauseOutlined)"
-            danger
-            >暂停导航</a-button
-          >
         </div>
         <!-- 4. 暂停导航 -->
         <div class="btn" v-if="state.curState === 4">
-          <a-button
-            @click="resumeNav"
-            type="primary"
-            :icon="h(CaretRightOutlined)"
-            >恢复导航</a-button
-          >
-          <a-button @click="selectMap">重新选择地图</a-button>
-          <a-button
-            @click="closeNav"
-            :icon="h(StopOutlined)"
-            type="primary"
-            danger
-            >结束导航</a-button
-          >
+          <div class="btn-line">
+            <a-button
+              @click="resumeNav"
+              type="primary"
+              :icon="h(CaretRightOutlined)"
+            >恢复导航</a-button>
+            <a-button @click="selectMap">重新选择地图</a-button>
+            <a-button
+              @click="closeNav"
+              :icon="h(StopOutlined)"
+              type="primary"
+              danger
+            >结束导航</a-button>
+          </div>
         </div>
         <!-- 5. 连接地图 -->
         <div class="btn" v-if="state.curState === 5">
           <a-button @click="confirmConnect" type="primary">确认连接</a-button>
           <a-button @click="cancelConnect">取消连接操作</a-button>
         </div>
-        <JoyStick v-if="globalStore.state.connected" :mode="state.curState >= 3"></JoyStick>
-      </a-card>
+      </div>
+    </TopNav>
+    <div class="view" id="navigationMap">
+      <div class="tips" v-if="state.curState === 0">请先选择地图</div>
+      <div id="mapImgWrap">
+        <VirtualWallCom
+          v-if="state.curState > 0"
+          :drawManage="state.drawManage"
+          :mapName="state.mapName"
+          style="pointer-events: none;"
+        />
+      </div>
     </div>
     <a-modal
       v-model:open="globalStore.state.showLabelInput"
@@ -109,7 +98,7 @@ import {
 } from "@ant-design/icons-vue";
 import { useGlobalStore } from "@/stores/global";
 import { usePatrolStore, usePatrolStoreToRefs } from "@/stores/patrol";
-import { onBeforeUnmount, reactive, h, watch } from "vue";
+import { onBeforeUnmount, reactive, h, watch, ref } from "vue";
 import { type GridMap, type Map, type GridPlan } from "@/typings";
 import type { TableOptions } from "@/typings/component";
 import type { MessageData } from "@foxglove/ws-protocol";
@@ -117,6 +106,7 @@ import DrawManage from "@/utils/draw";
 import { message, notification } from "ant-design-vue";
 import Patrol from "@/components/Patrol.vue";
 import VirtualWallCom from "@/components/VirtualWallCom.vue";
+import TopNav from "@/components/TopNav.vue";
 
 interface State {
   maps: Map[];
@@ -138,7 +128,7 @@ interface State {
 const foxgloveClientStore = useFoxgloveClientStore();
 const globalStore = useGlobalStore();
 const patrolStore = usePatrolStore();
-const { patroling } = usePatrolStoreToRefs();
+const liveVideo = ref(null);
 
 const state = reactive<State>({
   maps: [],
@@ -652,6 +642,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   gap: 15px;
 
   .view {
@@ -668,25 +659,23 @@ onBeforeUnmount(() => {
     }
   }
 
-  .config {
-    width: 35%;
-    height: 100%;
-    background: #fff;
-    overflow: auto;
-    .flex(center, center, column);
-    gap: 15px;
-
-    .btn {
-      width: 100%;
-      .flex(center, center);
+  .btn {
+    width: 100%;
+    margin-bottom: 10px;
+    
+    .btn-line {
+      .flex;
+      justify-content: initial;
       gap: 10px;
-      flex-wrap: wrap;
-      .switch {
-        .flex;
-        gap: 5px;
-      }
+      min-height: 32px;
+    }
+
+    .switch {
+      .flex;
+      gap: 15px;
     }
   }
+
 }
 
 :deep(.Table) {

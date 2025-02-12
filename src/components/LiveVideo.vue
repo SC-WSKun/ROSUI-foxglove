@@ -1,7 +1,6 @@
 <template>
-  <div>
+  <div class="live-video">
     <video id="video"></video>
-    <a-button @click="openPip" :disabled="pipBtnDisabled" type="primary">开启画中画</a-button>
   </div>
 </template>
 
@@ -53,6 +52,7 @@ const closeVideo = () => {
 }
 
 const openPip = async () => {
+  console.log('openPip livevideo');
   const picVideo = document.querySelector('#video')!;
   try {
     // @ts-ignore
@@ -65,6 +65,10 @@ const openPip = async () => {
   }
 }
 
+defineExpose({
+  openPip,
+})
+
 onMounted(() => {
   const video: HTMLVideoElement | null = document.querySelector('#video');
   if (!video) return;
@@ -75,8 +79,15 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-#video {
-  width: 100%;
-  height: 100%;
+.live-video {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+
+  #video {
+    width: 100%;
+    height: 100%;
+  }
 }
 </style>

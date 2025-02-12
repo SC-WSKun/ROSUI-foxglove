@@ -122,7 +122,7 @@ type GlobalState = {
 // });
 class GlobalStore {
   state: GlobalState;
-  robotID: string = 'robot_04';
+  robotID: string = '';
   constructor(){
     this.state = reactive<GlobalState>({
       loading: false,

@@ -14,6 +14,6 @@ import { RouterView } from 'vue-router'
   height: calc(100vh - @header-height);
   overflow-y: auto;
   background: @main-background-color;
-  padding: 20px 15px 10px 15px;
+  padding: 15px 15px 10px 15px;
 }
 </style>
