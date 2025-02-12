@@ -3,7 +3,7 @@
     <div class="video-container">
       <LiveVideo ref="liveVideo"/>
       <div class="overlay" @click="openPip">
-        内容
+        打开画中画
       </div>
     </div>
     <slot></slot>
