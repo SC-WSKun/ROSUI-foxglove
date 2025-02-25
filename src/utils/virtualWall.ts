@@ -23,11 +23,12 @@ export class VirtualWall {
   isDrawing = false;
   lines: ILine[] = [];
   revokeHistory: Uint8Array[] = [];
-  x = 0;
-  y = 0;
-  // moudeDown位置
+  // mouseDown位置
   startX = 0;
   startY = 0;
+  endX = 0;
+  endY = 0;
+
   scale:number = 1;
   mapInfo: MapInfo | null = null;
 
@@ -57,15 +58,10 @@ export class VirtualWall {
 
     this.canvas.addEventListener("mousedown", (event: any) => {
       if (!this.canvas || event.button !== MOUSE_LEFT_BUTTON) return;
-
-      // 存储压缩数据
-      this.save();
-
-      this.x = event.layerX;
-      this.y = event.layerY;
       this.startX = event.layerX;
       this.startY = event.layerY;
       this.isDrawing = true;
+      this.saveHistory();
     });
 
     this.canvas?.addEventListener('mousemove', (event: any) => {
@@ -74,17 +70,16 @@ export class VirtualWall {
       // 避免绘制中鼠标移出canvas界限导致绘制异常
       if (event.layerX < 5 || event.layerX >= this.canvas.width - 5
         || event.layerY < 5 || event.layerY >= this.canvas.height - 5
-      ) return this.endDraw(event);
-
-      this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
-      this.x = event.layerX;
-      this.y = event.layerY;
+      ) return this.isDrawing = false;
+      this.endX = event.layerX;
+      this.endY = event.layerY;
+      this.drawLine(ctx, this.startX, this.startY, event.layerX, event.layerY);
     });
 
-    this.canvas?.addEventListener('mouseup', (event: any) => {
-      if (event.button !== MOUSE_LEFT_BUTTON || !this.isDrawing) return;
-      this.endDraw(event);
-    });
+    this.canvas.addEventListener('mouseup', (event: any) => {
+      this.isDrawing = false;
+      this.saveLine();
+    })
   }
 
   drawLine(
@@ -94,6 +89,7 @@ export class VirtualWall {
     x1: number,
     y1: number
   ) {
+    this.revoke({popHistory: false});
     ctx.beginPath();
     ctx.strokeStyle = "orange";
     ctx.lineWidth = 5;
@@ -102,9 +98,14 @@ export class VirtualWall {
     ctx.stroke();
   }
 
-  revoke(popLine?: boolean = false) {
-    if (this.revokeHistory.length === 0 || !this.canvas) return;
-    const compressed = this.revokeHistory.pop()!;
+  revoke({popLine = false, popHistory = true}: {popLine?: boolean, popHistory?: boolean}) {
+    if (!this.canvas) return;
+    if (this.revokeHistory.length === 0) {
+      const ctx = this.canvas.getContext("2d");
+      ctx?.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      return;
+    }
+    const compressed = popHistory ? this.revokeHistory.pop()! : this.revokeHistory.at(-1);
     try {
       const decompressed = pako.inflate(compressed);
       const unit8ClampedArray = new Uint8ClampedArray(decompressed);
@@ -118,33 +119,24 @@ export class VirtualWall {
       if (popLine) this.lines.pop();
     } catch (err) {
       console.error(err);
+      message.error('撤销失败，请刷新页面');
     }
   }
 
-  save() {
+  saveLine() {
+    this.lines.push({
+      x0: this.startX,
+      y0: this.startY,
+      x1: this.endX,
+      y1: this.endY,
+    });
+  }
+
+  saveHistory() {
     const ctx = this.canvas!.getContext('2d')!;
     const imageData = ctx.getImageData(0, 0, this.canvas!.width, this.canvas!.height);
     const compressed = pako.deflate(new Uint8Array(imageData.data));
     this.revokeHistory.push(compressed);
-  }
-
-  endDraw(event: any) {
-    const ctx = this.canvas!.getContext('2d')!;
-    this.drawLine(ctx, this.x, this.y, event.layerX, event.layerY);
-    this.x = 0;
-    this.y = 0;
-    this.isDrawing = false;
-    console.log('endDraw-----------', this.lines);
-    // 曲线变直线
-    this.revoke();
-    this.save();
-    this.drawLine(ctx, this.startX, this.startY, event.layerX, event.layerY);
-    this.lines.push({
-      x0: this.startX,
-      y0: this.startY,
-      x1: event.layerX,
-      y1: event.layerY,
-    });
   }
 
   clear() {
@@ -195,7 +187,6 @@ export class VirtualWall {
         this.interactivePointWrap?.removeChild(el);
       });
       this.interactivePointWrap?.appendChild(el);
-      console.log('drawInteractivePoint', x0, y0, x1, y1);
     });
   }
 

@@ -3,12 +3,17 @@
 		<div style="flex-grow: 1;">
 			<div class="top-btns">
 				<a-button type="primary" @click="addPatrolPoint">添加巡逻点</a-button>
+				<a-input v-model:value="inputTaskName" placeholder="请输入任务名称" style="width: 180px;" />
+				<a-button type="primary" @click="addPatrolTask">创建任务</a-button>				
+			</div>
+			<div class="top-btns" style="margin-top: 20px;">
+				<a-button type="primary" @click="stopPatrol">停止巡逻</a-button>
 				<a-button type="primary" @click="startPatrol">开始巡逻</a-button>
 				<div>
 					<a-input-number
 						v-model:value="loopCount"
 						:min="1"
-						style="width: 50px; text-align: center;"
+						style="width: 65px; text-align: center;"
 					/>
 					<span style="display: inline-block; vertical-align: middle; padding-left: 10px;">次</span>
 				</div>
@@ -16,9 +21,12 @@
 			<ul class="patrol-list">
 				<li v-for="(point, idx) in pointsSelected" :key="idx">
 					<div  style="display: flex; justify-content: space-between;">
-						<span>{{ point.label_name }}</span>
 						<div>
-							<span class="del-btn" @click="delPatrolPoint(idx)">x</span>
+							<span>{{ point.label_name }}</span>
+							<SendOutlined v-if="pointIdx === idx" class="icon"/>
+						</div>
+						<div>
+							<span class="del-btn" @click="patrolStore.delPatrolPoint(idx)">x</span>
 							<a-button @click="openAddEventModal(idx)">添加事件</a-button>
 						</div>
 					</div>
@@ -28,7 +36,7 @@
 								v-for="(event, eIdx) in point?.events"
 								:key="event"
 								closable
-								@close.prevent="delEvent(idx, eIdx)"
+								@close.prevent="patrolStore.delEvent(idx, eIdx)"
 							>
 								{{ event }}
 							</a-tag>
@@ -37,6 +45,7 @@
 				</li>
 			</ul>
 		</div>
+		<!-- 事件列表 -->
 		<div
 			v-if="showEventsModal"
 			class="events-list-container"
@@ -53,22 +62,41 @@
 				</li>
 			</ul>
 		</div>
+		<!-- 任务列表 -->
+		<div class="task-list" :style="`width: ${showEventsModal ? '165' : '330'}px`">
+			<h3>任务列表</h3>
+			<span v-if="taskList.length === 0">暂无巡逻任务，请创建</span>
+			<ul v-else>
+				<li
+					v-for="(task, idx) in taskList"
+					:class="selectedTaskIdx === idx ? 'active' : ''"
+					@click="selectTask(idx)"
+				>
+					<span class="task-name">{{ task.task_name }}</span>
+					<span class="task-del" @click="delPatrolTask(task)">删除</span>
+				</li>
+			</ul>
+		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { useGlobalStore } from '@/stores/global';
-import { usePatrolStore, PatrolEvent } from '@/stores/patrol';
+import { type Task, type StartPatrolReq, usePatrolStore, usePatrolStoreToRefs, PatrolEvent } from '@/stores/patrol';
 import DrawManage from '@/utils/draw';
 import { message } from 'ant-design-vue';
 import { ref } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
+import { SendOutlined } from '@ant-design/icons-vue';
 
 const globalStore = useGlobalStore();
-const { pointsSelected, delPatrolPoint, addEvent, delEvent } = usePatrolStore();
+const patrolStore = usePatrolStore();
+const { pointsSelected, taskList, patroling } = usePatrolStoreToRefs();
 const showEventsModal = ref(false);
+const selectedTaskIdx = ref(-1);
 const pointIdx = ref(-1);
 const loopCount = ref(1);
+const inputTaskName = ref('');
 
 const props = defineProps<{
 	props: {
@@ -88,14 +116,38 @@ const openAddEventModal = (idx: number) => {
 }
 
 const confirmAddEvent = (event: PatrolEvent) => {
-	addEvent(event, pointIdx.value);
+	patrolStore.addEvent(event, pointIdx.value);
+}
+
+const addPatrolTask = () => {
+	if (pointsSelected.value.length === 0) return message.info('请先选择巡逻点');
+	if (inputTaskName.value === '') return message.info('请输入任务名称');
+	patrolStore.addPatrolTask({taskName: inputTaskName.value});
+}
+
+const delPatrolTask = (task: Task) => {
+	patrolStore.delPatrolTask({ task_name: task.task_name });
 }
 
 const startPatrol = () => {
-	if (pointsSelected.length === 0) return message.info('请先选择巡逻点');
+	if (taskList.value.length === 0) return message.info('请先创建任务');
+	if (selectedTaskIdx.value === -1) return message.info('请先选择任务');
 	globalStore.closeModal();
 	message.success('巡逻中...');
-	props.props.drawManage.startPatrol(loopCount.value);
+	const patrolReq: StartPatrolReq = {
+		task_name: taskList.value[selectedTaskIdx.value].task_name,
+		loop_count: loopCount.value ?? 1,
+	};
+	props.props.drawManage.startPatrol(patrolReq);
+}
+
+const stopPatrol = () => {
+	patrolStore.stopPatrol();
+}
+
+const selectTask = (idx: number) => {
+	selectedTaskIdx.value = idx;
+	patrolStore.loadSelectedTask(idx);
 }
 </script>
 
@@ -137,6 +189,7 @@ const startPatrol = () => {
 
 .events-list-container {
 	display: flex;
+	width: 165px;
 	flex-direction: column;
 	align-items: center;
 	border-left: 2px solid #ccc;
@@ -152,17 +205,78 @@ const startPatrol = () => {
 		li {
 			cursor: pointer;
 			font-family: 'Roboto Slab', serif;
-			width: 150px;
+			width: 100px;
 			height: 35px;
 			line-height: 35px;
 			padding-left: 10px;
-			background-color: peachpuff;
+			border: 1px solid peachpuff;
 			border-radius: 10px;
 			margin-bottom: 10px;
 			&:hover {
 				background-color: #f9c08e;
 			}
 		}
+	}
+}
+
+.task-list {
+	display: flex;
+	width: 165px;
+	flex-direction: column;
+	align-items: center;
+	border-left: 2px solid #ccc;
+	padding-left: 20px;
+	margin-left: 20px;
+	ul {
+		list-style: none;
+		margin: 0;
+		padding-left: 0;
+		margin-top: 16px;
+		li {
+			.task-name {
+				display: inline-block;
+				cursor: pointer;
+				font-family: 'Roboto Slab', serif;
+				width: 100px;
+				height: 35px;
+				line-height: 35px;
+				padding-left: 10px;
+				color: #000;
+				border: 1px solid #5b63d3;
+				border-radius: 10px;
+				margin-bottom: 10px;
+				&:hover, &.active {
+					color: #fff;
+					background-color: #6169db;
+				}
+			}
+		}
+		.task-del {
+			cursor: pointer;
+			color: red;
+			margin-left: 10px;
+			&:hover {
+				opacity: 0.8;
+			}
+		}
+	}
+}
+
+.icon {
+	animation: icon 2s infinite ease;
+	margin-left: 10px;
+	rotate: 180deg;
+}
+
+@keyframes icon {
+	0% {
+		transform: translateX(0);
+	}
+	50% {
+		transform: translateX(-10px);
+	}
+	100% {
+		transform: translateX(0);
 	}
 }
 </style>
