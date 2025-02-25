@@ -216,7 +216,7 @@ export default class DrawManage {
   async updateLabels() {
     if (!this.labelWrap) return;
     const { result, labels } = await this.foxgloveClientStore.callService(
-      "/label_manager/get_labels"
+      "/nav2_extended/get_labels"
     );
     if (result !== true) {
       message.error("获取标签失败");
@@ -249,7 +249,7 @@ export default class DrawManage {
 
   async removeLabel(label_name: string) {
     const { result } = await this.foxgloveClientStore.callService(
-      "/label_manager/del_label",
+      "/nav2_extended/del_label",
       { label_name }
     );
     if (result !== true) {
@@ -864,7 +864,7 @@ export default class DrawManage {
     );
     label_name = new TextEncoder().encode(label_name).toString();
     const { result } = await this.foxgloveClientStore?.callService(
-      "/label_manager/add_label",
+      "/nav2_extended/add_label",
       {
         label_name,
         pose: {
