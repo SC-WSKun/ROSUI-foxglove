@@ -3,7 +3,7 @@
 		<div style="flex-grow: 1;">
 			<div class="top-btns">
 				<a-button type="primary" @click="addPatrolPoint">添加巡逻点</a-button>
-				<a-input v-model.trim="inputTaskName" placeholder="请输入任务名称" style="width: 180px;"></a-input>
+				<a-input v-model:value="inputTaskName" placeholder="请输入任务名称" style="width: 180px;" />
 				<a-button type="primary" @click="addPatrolTask">创建任务</a-button>				
 			</div>
 			<div class="top-btns" style="margin-top: 20px;">
