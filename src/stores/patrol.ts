@@ -187,7 +187,7 @@ export const usePatrolStore = defineStore('patrol', () => {
 	}
 
 	async function getPatrolTask() {
-		const { result, tasks }: GetPatrolTaskRes = await foxgloveClientStore.callService('/nav2_extended/stop_patrol',{});
+		const { result, tasks }: GetPatrolTaskRes = await foxgloveClientStore.callService('/nav2_extended/get_patrol_tasks',{});
 		if (!result) return message.error('获取巡逻任务失败');
 		taskList.value = tasks;
 	}
