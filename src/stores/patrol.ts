@@ -175,7 +175,7 @@ export const usePatrolStore = defineStore('patrol', () => {
 				})),
 			}
 		}
-		const { result } = await foxgloveClientStore.callService('/nav2_extended/stop_patrol', params);
+		const { result } = await foxgloveClientStore.callService('/nav2_extended/add_patrol_task', params);
 		if (!result) return message.error('添加巡逻任务失败');
 		taskList.value.push(params.task);
 	}
@@ -187,7 +187,7 @@ export const usePatrolStore = defineStore('patrol', () => {
 	}
 
 	async function getPatrolTask() {
-		const { result, tasks }: GetPatrolTaskRes = await foxgloveClientStore.callService('/nav2_extended/stop_patrol',{});
+		const { result, tasks }: GetPatrolTaskRes = await foxgloveClientStore.callService('/nav2_extended/get_patrol_tasks',{});
 		if (!result) return message.error('获取巡逻任务失败');
 		taskList.value = tasks;
 	}

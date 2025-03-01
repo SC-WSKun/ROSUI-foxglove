@@ -4,7 +4,7 @@
 			<div class="top-btns">
 				<a-button type="primary" @click="addPatrolPoint">添加巡逻点</a-button>
 				<a-input v-model:value="inputTaskName" placeholder="请输入任务名称" style="width: 180px;" />
-				<a-button type="primary" @click="addPatrolTask">创建任务</a-button>				
+				<a-button type="primary" @click="addPatrolTask">创建任务</a-button>
 			</div>
 			<div class="top-btns" style="margin-top: 20px;">
 				<a-button type="primary" @click="stopPatrol">停止巡逻</a-button>
@@ -85,7 +85,7 @@ import { useGlobalStore } from '@/stores/global';
 import { type Task, type StartPatrolReq, usePatrolStore, usePatrolStoreToRefs, PatrolEvent } from '@/stores/patrol';
 import DrawManage from '@/utils/draw';
 import { message } from 'ant-design-vue';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { SendOutlined } from '@ant-design/icons-vue';
 
@@ -103,6 +103,10 @@ const props = defineProps<{
 		drawManage: DrawManage,
 	}
 }>();
+
+onMounted(() => {
+  patrolStore.getPatrolTask();
+})
 
 const addPatrolPoint = () => {
 	props.props.drawManage.drawPatrolPoints();
