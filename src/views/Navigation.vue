@@ -640,6 +640,7 @@ onBeforeUnmount(() => {
   state.drawManage.unSubscribeScanPoints();
   state.drawManage.unAdvertiseNavTopic();
 
+  patrolStore.patrolMode = false;
   patrolStore.exitPatrol();
 });
 </script>

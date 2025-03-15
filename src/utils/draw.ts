@@ -263,7 +263,6 @@ export default class DrawManage {
 
   // 轨迹曲线
   drawCurve(data: GridPlan) {
-    console.log('draw curve');
     if (this.clearCurveTimer) clearTimeout(this.clearCurveTimer);
     // 2s内没接收到轨迹消息则清除轨迹
     this.clearCurveTimer = setTimeout(() => {

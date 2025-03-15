@@ -183,10 +183,13 @@ export const usePatrolStore = defineStore('patrol', () => {
 
 	async function delPatrolTask(params: DelPatrolTaskReq) {
 		console.log('delPatrolTask params', params);
-		const { result } = await foxgloveClientStore.callService('/nav2_extended/stop_patrol', params);
+		const { result } = await foxgloveClientStore.callService('/nav2_extended/del_patrol_task', params);
 		console.log('delPatrolTask result', result);
 		if (!result) message.error('删除巡逻任务失败');
-		else message.success('删除巡逻任务成功');
+		else {
+			message.success('删除巡逻任务成功');
+			getPatrolTask();
+		}
 	}
 
 	async function getPatrolTask() {

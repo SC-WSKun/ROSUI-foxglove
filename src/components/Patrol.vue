@@ -63,7 +63,7 @@
 			</ul>
 		</div>
 		<!-- 任务列表 -->
-		<div class="task-list" :style="`width: ${showEventsModal ? '165' : '330'}px`">
+		<div class="task-list" :style="`width: ${showEventsModal ? '175' : '330'}px`">
 			<h3>任务列表</h3>
 			<span v-if="taskList.length === 0">暂无巡逻任务，请创建</span>
 			<ul v-else>
