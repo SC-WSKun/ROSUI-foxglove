@@ -40,6 +40,14 @@
           <div class="btn-line" v-show="state.marking">
             <div class="switch"><a-switch v-model:checked="patrolStore.patrolMode"></a-switch>巡逻模式</div>
             <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
+            <a-button
+              :data-notDisable="true"
+              type="primary"
+              @click="patrolStore.stopPatrol()"
+              v-show="patrolStore.patrolMode"
+            >
+              停止巡逻
+            </a-button>
           </div>
         </div>
         <!-- 4. 暂停导航 -->

@@ -145,8 +145,9 @@ export const usePatrolStore = defineStore('patrol', () => {
 	}
 
 	async function stopPatrol() {
-		const { result } = await foxgloveClientStore.callService('/nav2_extended/stop_patrol', {});
+		message.success('停止巡逻');
 		patroling.value = false;
+		const { result } = await foxgloveClientStore.callService('/nav2_extended/stop_patrol', {});
 		console.log('stop Patrol', result);
 	}
 
