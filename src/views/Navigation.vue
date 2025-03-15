@@ -639,6 +639,8 @@ onBeforeUnmount(() => {
   state.drawManage.unSubscribeCarPosition();
   state.drawManage.unSubscribeScanPoints();
   state.drawManage.unAdvertiseNavTopic();
+
+  patrolStore.exitPatrol();
 });
 </script>
 

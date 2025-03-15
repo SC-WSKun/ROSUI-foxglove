@@ -73,7 +73,7 @@
 					@click="selectTask(idx)"
 				>
 					<span class="task-name">{{ task.task_name }}</span>
-					<span class="task-del" @click="delPatrolTask(task)">删除</span>
+					<span class="task-del" @click.stop="delPatrolTask(task)">删除</span>
 				</li>
 			</ul>
 		</div>
@@ -85,13 +85,13 @@ import { useGlobalStore } from '@/stores/global';
 import { type Task, type StartPatrolReq, usePatrolStore, usePatrolStoreToRefs, PatrolEvent } from '@/stores/patrol';
 import DrawManage from '@/utils/draw';
 import { message } from 'ant-design-vue';
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { SendOutlined } from '@ant-design/icons-vue';
 
 const globalStore = useGlobalStore();
 const patrolStore = usePatrolStore();
-const { pointsSelected, taskList, patroling } = usePatrolStoreToRefs();
+const { pointsSelected, taskList } = usePatrolStoreToRefs();
 const showEventsModal = ref(false);
 const selectedTaskIdx = ref(-1);
 const pointIdx = ref(-1);
@@ -153,6 +153,10 @@ const selectTask = (idx: number) => {
 	selectedTaskIdx.value = idx;
 	patrolStore.loadSelectedTask(idx);
 }
+
+onBeforeUnmount(() => {
+	stopPatrol();
+});
 </script>
 
 <style lang="less" scoped>
