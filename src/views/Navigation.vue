@@ -460,6 +460,7 @@ const planMsgHandler = ({
 
 // 订阅轨迹话题
 const subscribePlanTopic = () => {
+  if (state.planSubId !== -1) return;
   globalStore.setLoading(true);
   foxgloveClientStore.subscribeTopic("/plan").then((res) => {
     state.planSubId = res;
@@ -609,6 +610,7 @@ const switchMarking = () => {
 const switchPatroling = () => {
   if (patrolStore.patrolMode) {
     patrolStore.openPatrol(state.drawManage);
+    subscribePlanTopic();
     notification.success({
       placement: "topRight",
       message: "开启巡逻模式",
