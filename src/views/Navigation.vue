@@ -24,7 +24,7 @@
         <div class="btn" v-if="state.curState === 3">
           <a-button @click="connectMap">连接地图</a-button>
           <div class="btn-line">
-            <div class="switch"><a-switch v-model:checked="state.navigating"></a-switch>导航模式</div>
+            <div class="switch"><a-switch v-model:checked="state.navigating" :disabled="patroling"></a-switch>导航模式</div>
             <a-button @click="crossNav" type="primary">跨图导航</a-button>
             <a-button
               @click="pauseNav"
@@ -35,10 +35,10 @@
             >
           </div>
           <div class="btn-line">
-            <div class="switch"><a-switch v-model:checked="state.marking"></a-switch>标点模式</div>
+            <div class="switch"><a-switch v-model:checked="state.marking" :disabled="patroling"></a-switch>标点模式</div>
           </div>
           <div class="btn-line" v-show="state.marking">
-            <div class="switch"><a-switch v-model:checked="patrolStore.patrolMode"></a-switch>巡逻模式</div>
+            <div class="switch"><a-switch v-model:checked="patrolStore.patrolMode" :disabled="patroling"></a-switch>巡逻模式</div>
             <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
             <a-button
               :data-notDisable="true"
