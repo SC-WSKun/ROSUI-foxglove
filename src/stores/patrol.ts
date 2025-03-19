@@ -130,23 +130,24 @@ export const usePatrolStore = defineStore('patrol', () => {
 
 	function exitPatrol() {
 		pointsSelected.value = [];
+		patroling.value = false;
+		patrolMode.value = false;
+		stopPatrol();
     foxgloveClientStore.stopListenMessage(patrolMsgHandler);
 		foxgloveClientStore.unSubscribeTopic(subId);
 		subId = -1;
 	}
 
 	async function patrol(params: StartPatrolReq) {
+		patroling.value = true;
 		const { result } = await foxgloveClientStore.callService('/nav2_extended/start_patrol', params);
-		if (result) {
-			patroling.value = true;
-			message.success('巡逻中...');
-		}
-		else message.error('巡逻失败');
+		console.log('start Patrol', result);
 	}
 
 	async function stopPatrol() {
+		patroling.value = false;
 		const { result } = await foxgloveClientStore.callService('/nav2_extended/stop_patrol', {});
-		console.log('stopPatrol result', result);
+		console.log('stop Patrol', result);
 	}
 
 	function patrolMsgHandler({
@@ -181,9 +182,14 @@ export const usePatrolStore = defineStore('patrol', () => {
 	}
 
 	async function delPatrolTask(params: DelPatrolTaskReq) {
-		const { result } = await foxgloveClientStore.callService('/nav2_extended/stop_patrol', params);
+		console.log('delPatrolTask params', params);
+		const { result } = await foxgloveClientStore.callService('/nav2_extended/del_patrol_task', params);
+		console.log('delPatrolTask result', result);
 		if (!result) message.error('删除巡逻任务失败');
-		else message.success('删除巡逻任务成功');
+		else {
+			message.success('删除巡逻任务成功');
+			getPatrolTask();
+		}
 	}
 
 	async function getPatrolTask() {

@@ -63,17 +63,16 @@
 			</ul>
 		</div>
 		<!-- 任务列表 -->
-		<div class="task-list" :style="`width: ${showEventsModal ? '165' : '330'}px`">
+		<div class="task-list" :style="`width: ${showEventsModal ? '175' : '330'}px`">
 			<h3>任务列表</h3>
 			<span v-if="taskList.length === 0">暂无巡逻任务，请创建</span>
 			<ul v-else>
 				<li
 					v-for="(task, idx) in taskList"
-					:class="selectedTaskIdx === idx ? 'active' : ''"
 					@click="selectTask(idx)"
 				>
-					<span class="task-name">{{ task.task_name }}</span>
-					<span class="task-del" @click="delPatrolTask(task)">删除</span>
+					<span :class="`task-name ${selectedTaskIdx === idx ? 'active' : ''}`">{{ task.task_name }}</span>
+					<span class="task-del" @click.stop="delPatrolTask(task)">删除</span>
 				</li>
 			</ul>
 		</div>
@@ -91,7 +90,7 @@ import { SendOutlined } from '@ant-design/icons-vue';
 
 const globalStore = useGlobalStore();
 const patrolStore = usePatrolStore();
-const { pointsSelected, taskList, patroling } = usePatrolStoreToRefs();
+const { pointsSelected, taskList } = usePatrolStoreToRefs();
 const showEventsModal = ref(false);
 const selectedTaskIdx = ref(-1);
 const pointIdx = ref(-1);
@@ -146,6 +145,7 @@ const startPatrol = () => {
 }
 
 const stopPatrol = () => {
+	message.success('停止巡逻');
 	patrolStore.stopPatrol();
 }
 
@@ -153,6 +153,7 @@ const selectTask = (idx: number) => {
 	selectedTaskIdx.value = idx;
 	patrolStore.loadSelectedTask(idx);
 }
+
 </script>
 
 <style lang="less" scoped>

@@ -24,7 +24,7 @@
         <div class="btn" v-if="state.curState === 3">
           <a-button @click="connectMap">连接地图</a-button>
           <div class="btn-line">
-            <div class="switch"><a-switch v-model:checked="state.navigating"></a-switch>导航模式</div>
+            <div class="switch"><a-switch v-model:checked="state.navigating" :disabled="patroling"></a-switch>导航模式</div>
             <a-button @click="crossNav" type="primary">跨图导航</a-button>
             <a-button
               @click="pauseNav"
@@ -35,11 +35,19 @@
             >
           </div>
           <div class="btn-line">
-            <div class="switch"><a-switch v-model:checked="state.marking"></a-switch>标点模式</div>
+            <div class="switch"><a-switch v-model:checked="state.marking" :disabled="patroling"></a-switch>标点模式</div>
           </div>
           <div class="btn-line" v-show="state.marking">
-            <div class="switch"><a-switch v-model:checked="patrolStore.patrolMode"></a-switch>巡逻模式</div>
+            <div class="switch"><a-switch v-model:checked="patrolStore.patrolMode" :disabled="patroling"></a-switch>巡逻模式</div>
             <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
+            <a-button
+              :data-notDisable="true"
+              type="primary"
+              @click="stopPatrol"
+              v-show="patrolStore.patrolMode"
+            >
+              停止巡逻
+            </a-button>
           </div>
         </div>
         <!-- 4. 暂停导航 -->
@@ -460,6 +468,7 @@ const planMsgHandler = ({
 
 // 订阅轨迹话题
 const subscribePlanTopic = () => {
+  if (state.planSubId !== -1) return;
   globalStore.setLoading(true);
   foxgloveClientStore.subscribeTopic("/plan").then((res) => {
     state.planSubId = res;
@@ -519,10 +528,12 @@ const switchNavigation = () => {
       duration: 3,
     });
     subscribePlanTopic();
+    message.info('地图缩放拖拽功能已关闭');
   } else {
     state.drawManage.navRemoveListener();
     state.drawManage.pzAddListener();
     unSubscribePlanTopic();
+    message.info('地图缩放拖拽功能已开启');
   }
 };
 
@@ -530,6 +541,10 @@ const switchNavigation = () => {
 const pauseNav = () => {
   state.navigating = false;
   state.curState = STATE_MAP.PAUSING;
+  
+  state.marking = false;
+  patrolStore.patrolMode = false;
+  patrolStore.exitPatrol();
 };
 
 // 恢复导航
@@ -609,6 +624,7 @@ const switchMarking = () => {
 const switchPatroling = () => {
   if (patrolStore.patrolMode) {
     patrolStore.openPatrol(state.drawManage);
+    subscribePlanTopic();
     notification.success({
       placement: "topRight",
       message: "开启巡逻模式",
@@ -630,6 +646,11 @@ const cancelLabel = () => {
   globalStore.closeLabelInput();
 };
 
+const stopPatrol = () => {
+  message.success('停止巡逻');
+	patrolStore.stopPatrol();
+}
+
 onBeforeUnmount(() => {
   foxgloveClientStore.callService("/tiered_nav_state_machine/switch_mode", {
     mode: 0,
@@ -639,6 +660,9 @@ onBeforeUnmount(() => {
   state.drawManage.unSubscribeCarPosition();
   state.drawManage.unSubscribeScanPoints();
   state.drawManage.unAdvertiseNavTopic();
+
+  patrolStore.patrolMode = false;
+  patrolStore.exitPatrol();
 });
 </script>
 
