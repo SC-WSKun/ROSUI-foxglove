@@ -43,7 +43,7 @@
             <a-button
               :data-notDisable="true"
               type="primary"
-              @click="patrolStore.stopPatrol()"
+              @click="stopPatrol"
               v-show="patrolStore.patrolMode"
             >
               停止巡逻
@@ -528,10 +528,12 @@ const switchNavigation = () => {
       duration: 3,
     });
     subscribePlanTopic();
+    message.info('地图缩放拖拽功能已关闭');
   } else {
     state.drawManage.navRemoveListener();
     state.drawManage.pzAddListener();
     unSubscribePlanTopic();
+    message.info('地图缩放拖拽功能已开启');
   }
 };
 
@@ -539,6 +541,10 @@ const switchNavigation = () => {
 const pauseNav = () => {
   state.navigating = false;
   state.curState = STATE_MAP.PAUSING;
+  
+  state.marking = false;
+  patrolStore.patrolMode = false;
+  patrolStore.exitPatrol();
 };
 
 // 恢复导航
@@ -639,6 +645,11 @@ const cancelLabel = () => {
   console.log("cancel add label");
   globalStore.closeLabelInput();
 };
+
+const stopPatrol = () => {
+  message.success('停止巡逻');
+	patrolStore.stopPatrol();
+}
 
 onBeforeUnmount(() => {
   foxgloveClientStore.callService("/tiered_nav_state_machine/switch_mode", {

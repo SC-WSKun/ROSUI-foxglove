@@ -69,10 +69,9 @@
 			<ul v-else>
 				<li
 					v-for="(task, idx) in taskList"
-					:class="selectedTaskIdx === idx ? 'active' : ''"
 					@click="selectTask(idx)"
 				>
-					<span class="task-name">{{ task.task_name }}</span>
+					<span :class="`task-name ${selectedTaskIdx === idx ? 'active' : ''}`">{{ task.task_name }}</span>
 					<span class="task-del" @click.stop="delPatrolTask(task)">删除</span>
 				</li>
 			</ul>
@@ -85,7 +84,7 @@ import { useGlobalStore } from '@/stores/global';
 import { type Task, type StartPatrolReq, usePatrolStore, usePatrolStoreToRefs, PatrolEvent } from '@/stores/patrol';
 import DrawManage from '@/utils/draw';
 import { message } from 'ant-design-vue';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { VueDraggable } from 'vue-draggable-plus';
 import { SendOutlined } from '@ant-design/icons-vue';
 
@@ -146,6 +145,7 @@ const startPatrol = () => {
 }
 
 const stopPatrol = () => {
+	message.success('停止巡逻');
 	patrolStore.stopPatrol();
 }
 
