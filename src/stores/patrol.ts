@@ -138,10 +138,10 @@ export const usePatrolStore = defineStore('patrol', () => {
 		subId = -1;
 	}
 
-	function patrol(params: StartPatrolReq) {
+	async function patrol(params: StartPatrolReq) {
 		patroling.value = true;
-		message.success('巡逻中...');
-		foxgloveClientStore.callService('/nav2_extended/start_patrol', params);
+		const { result } = await foxgloveClientStore.callService('/nav2_extended/start_patrol', params);
+		console.log('start Patrol', result);
 	}
 
 	async function stopPatrol() {

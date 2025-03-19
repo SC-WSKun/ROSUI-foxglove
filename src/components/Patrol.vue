@@ -154,9 +154,6 @@ const selectTask = (idx: number) => {
 	patrolStore.loadSelectedTask(idx);
 }
 
-onBeforeUnmount(() => {
-	stopPatrol();
-});
 </script>
 
 <style lang="less" scoped>
