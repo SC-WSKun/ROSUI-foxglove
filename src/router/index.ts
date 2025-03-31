@@ -20,6 +20,11 @@ const router = createRouter({
           component: () => import('../views/Navigation.vue')
         },
         {
+          path: 'virtualWall',
+          name: 'virtualWall',
+          component: () => import('../views/VirtualWall.vue')
+        },
+        {
           path: 'mapManagement',
           name: 'mapManagement',
           component: () => import('../views/MapManagement.vue')

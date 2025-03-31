@@ -44,7 +44,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function initClient() {
     state.client = new FoxgloveClient({
-      ws: new WebSocket("ws://10.3.51.184:8765", [FoxgloveClient.SUPPORTED_SUBPROTOCOL])
+      ws: new WebSocket("ws://10.3.51.184:8675", [FoxgloveClient.SUPPORTED_SUBPROTOCOL])
     })
     state.client.on('advertise', (channels: Channel[]) => {
       channels.forEach((channel: Channel) => {
@@ -60,8 +60,10 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     })
     state.client.on('advertiseServices', (services: Service[]) => {
       console.log('services', services)
-
       state.services.push(...services)
+      if (state.services.length === 0 && services.length === 0) {
+        message.error('获取服务列表失败，请刷新重试');
+      } else message.success('获取服务列表成功');
     })
     state.client.on('open', () => {
       message.success('Connected successfully!')

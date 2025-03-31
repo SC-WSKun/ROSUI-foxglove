@@ -24,7 +24,8 @@ import {
   Card,
   Empty,
   Tabs,
-  ConfigProvider
+  ConfigProvider,
+  Tag,
 } from 'ant-design-vue'
 import JoyStick from '@/components/JoyStick.vue'
 import LiveVideo from '@/components/LiveVideo.vue'
@@ -57,6 +58,7 @@ export default {
     app.use(Empty)
     app.use(Tabs)
     app.use(ConfigProvider)
+    app.use(Tag)
 
     app.component('JoyStick', JoyStick)
     app.component('LiveVideo', LiveVideo)

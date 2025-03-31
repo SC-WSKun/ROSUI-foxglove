@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import nipplejs from 'nipplejs'
-import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, defineProps } from 'vue'
 import { useFoxgloveClientStore } from '@/stores/foxgloveClient'
 import { notification } from 'ant-design-vue';
 
@@ -12,11 +12,23 @@ interface State {
   manager: nipplejs.JoystickManager | null
   linearSpeed: number
   angularSpeed: number
-  timer: number | undefined
+  timer: NodeJS.Timeout | undefined
   subId: number | undefined
   channelId: number | undefined
+  topicName: MoveTopic | undefined
   stickActive: boolean
 }
+
+enum MoveTopic {
+  cmd_vel_teleop = '/cmd_vel_teleop',
+  cmd_vel = '/cmd_vel',
+}
+
+const props = defineProps<{
+  // true: cmd_vel_teleop
+  // false: cmd_vel
+	mode: boolean
+}>();
 
 const nippleZone = ref<HTMLDivElement>()
 
@@ -24,7 +36,8 @@ const nippleOptions: nipplejs.JoystickManagerOptions = {
   color: '#5964f8',
   mode: 'static',
   position: {
-    bottom: '120px',
+    // bottom: '120px',
+    bottom: '0px',
     right: '120px'
   },
   size: 150,
@@ -40,12 +53,20 @@ const state = reactive<State>({
   timer: undefined,
   subId: -1,
   channelId: -1,
+  topicName: undefined,
   stickActive: false
 })
 
 const MAX_LINEAR = 15.0 // m/s
 const MAX_ANGULAR = 20.0 // rad/s
 const MAX_DISTANCE = 75.0 // pixels
+
+watch(
+  () => props.mode,
+  () => {
+    advertiseMoveTopic(props.mode ? MoveTopic.cmd_vel_teleop : MoveTopic.cmd_vel);
+  }
+)
 
 // 处理移动事件
 const handleMove = (linearSpeed: number, angularSpeed: number) => {
@@ -115,17 +136,23 @@ const handleKeyup = (event: KeyboardEvent) => {
   }
   handleMove(state.linearSpeed, state.angularSpeed)
 }
-
-onMounted(() => {
-  // 发布小车控制相关话题
+// 解耦摇杆控制相关话题
+const advertiseMoveTopic = (topic: MoveTopic) => {
+  if (state.topicName === topic) return;
+  state.topicName = topic;
   state.channelId = foxgloveClientStore.advertiseTopic({
     encoding: 'cdr',
     schema:
       '# This expresses velocity in free space broken into its linear and angular parts.\n\nVector3  linear\nVector3  angular\n\n================================================================================\nMSG: geometry_msgs/Vector3\n# This represents a vector in free space.\n\n# This is semantically different than a point.\n# A vector is always anchored at the origin.\n# When a transform is applied to a vector, only the rotational component is applied.\n\nfloat64 x\nfloat64 y\nfloat64 z\n',
     schemaEncoding: 'ros2msg',
     schemaName: 'geometry_msgs/msg/Twist',
-    topic: '/cmd_vel_teleop'
-  })
+    topic,
+  });
+}
+
+onMounted(() => {
+  // 发布小车控制相关话题
+  advertiseMoveTopic(MoveTopic.cmd_vel);
   nextTick(() => {
     nippleOptions.zone = nippleZone.value
     state.manager = nipplejs.create(nippleOptions)
