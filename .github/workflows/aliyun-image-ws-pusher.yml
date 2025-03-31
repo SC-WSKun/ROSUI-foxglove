@@ -1,4 +1,4 @@
-name: Aliyun Docker Image Pusher Production
+name:  Docker Image Pusher Websocket
 
 on:
   push:

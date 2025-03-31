@@ -1,4 +1,4 @@
-name: Aliyun Docker Image Pusher Production
+name: Docker Image Pusher Production
 
 on:
   push:

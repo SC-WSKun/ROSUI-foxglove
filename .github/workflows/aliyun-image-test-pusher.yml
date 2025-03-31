@@ -1,4 +1,4 @@
-name: Aliyun Docker Image Pusher Development
+name:  Docker Image Pusher Development
 
 on:
   pull_request:
