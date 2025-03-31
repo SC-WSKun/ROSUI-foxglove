@@ -1,28 +1,9 @@
 <template>
   <div class="navigation">
-    <div class="view" id="navigationMap">
-      <div class="tips" v-if="state.curState === 0">请先在右侧选择地图</div>
-      <div id="mapImgWrap">
-        <VirtualWallCom
-          v-if="state.curState > 0"
-          :drawManage="state.drawManage"
-          :mapName="state.mapName"
-          style="pointer-events: none;"
-        />
-      </div>
-    </div>
-    <div class="config">
-      <a-card
-        title="实时画面"
-        :bordered="false"
-        style="width: 100%; height: 100%"
-      >
-        <LiveVideo />
-      </a-card>
-      <a-card
-        title="操作栏"
-        :bordered="false"
-        style="width: 100%; height: 100%"
+    <TopNav :showJoyStick="globalStore.state.connected" :mode="state.curState >= 3">
+      <div
+        class="btns"
+        v-disable="patroling"
       >
         <!-- 0. 等待用户获取地图列表 -->
         <div class="btn" v-if="state.curState === 0">
@@ -34,55 +15,75 @@
         </div>
         <!-- 2. 指定初始位姿 -->
         <div class="btn" v-if="state.curState === 2">
-          <a-button type="primary" @click="finishAdding"> 完成 </a-button>
-          <a-button @click="cancelInitPose">取消</a-button>
+          <div class="btn-line">
+            <a-button type="primary" @click="finishAdding"> 完成 </a-button>
+            <a-button @click="cancelInitPose">取消</a-button>
+          </div>
         </div>
         <!-- 3. 导航 -->
         <div class="btn" v-if="state.curState === 3">
           <a-button @click="connectMap">连接地图</a-button>
-          <div class="switch">
-            <a-switch v-model:checked="state.navigating"></a-switch>导航模式
+          <div class="btn-line">
+            <div class="switch"><a-switch v-model:checked="state.navigating" :disabled="patroling"></a-switch>导航模式</div>
+            <a-button @click="crossNav" type="primary">跨图导航</a-button>
+            <a-button
+              @click="pauseNav"
+              type="primary"
+              :icon="h(PauseOutlined)"
+              danger
+              >暂停导航</a-button
+            >
           </div>
-          <div class="switch">
-            <a-switch v-model:checked="state.marking"></a-switch>标点模式
+          <div class="btn-line">
+            <div class="switch"><a-switch v-model:checked="state.marking" :disabled="patroling"></a-switch>标点模式</div>
           </div>
-          <div class="switch" v-show="state.marking">
-            <a-switch v-model:checked="patrolStore.patroling"></a-switch>巡逻模式
+          <div class="btn-line" v-show="state.marking">
+            <div class="switch"><a-switch v-model:checked="patrolStore.patrolMode" :disabled="patroling"></a-switch>巡逻模式</div>
+            <a-button :data-notDisable="true" @click="patrolManage" type="primary" v-show="patrolStore.patrolMode">巡逻管理</a-button>
+            <a-button
+              :data-notDisable="true"
+              type="primary"
+              @click="stopPatrol"
+              v-show="patrolStore.patrolMode"
+            >
+              停止巡逻
+            </a-button>
           </div>
-          <a-button @click="patrolManage" type="primary" v-show="patrolStore.patroling">巡逻管理</a-button>
-          <a-button @click="crossNav" type="primary">跨图导航</a-button>
-          <a-button
-            @click="pauseNav"
-            type="primary"
-            :icon="h(PauseOutlined)"
-            danger
-            >暂停导航</a-button
-          >
         </div>
         <!-- 4. 暂停导航 -->
         <div class="btn" v-if="state.curState === 4">
-          <a-button
-            @click="resumeNav"
-            type="primary"
-            :icon="h(CaretRightOutlined)"
-            >恢复导航</a-button
-          >
-          <a-button @click="selectMap">重新选择地图</a-button>
-          <a-button
-            @click="closeNav"
-            :icon="h(StopOutlined)"
-            type="primary"
-            danger
-            >结束导航</a-button
-          >
+          <div class="btn-line">
+            <a-button
+              @click="resumeNav"
+              type="primary"
+              :icon="h(CaretRightOutlined)"
+            >恢复导航</a-button>
+            <a-button @click="selectMap">重新选择地图</a-button>
+            <a-button
+              @click="closeNav"
+              :icon="h(StopOutlined)"
+              type="primary"
+              danger
+            >结束导航</a-button>
+          </div>
         </div>
         <!-- 5. 连接地图 -->
         <div class="btn" v-if="state.curState === 5">
           <a-button @click="confirmConnect" type="primary">确认连接</a-button>
           <a-button @click="cancelConnect">取消连接操作</a-button>
         </div>
-        <JoyStick v-if="globalStore.state.connected" :mode="state.curState >= 3"></JoyStick>
-      </a-card>
+      </div>
+    </TopNav>
+    <div class="view" id="navigationMap">
+      <div class="tips" v-if="state.curState === 0">请先选择地图</div>
+      <div id="mapImgWrap">
+        <VirtualWallCom
+          v-if="state.curState > 0"
+          :drawManage="state.drawManage"
+          :mapName="state.mapName"
+          style="pointer-events: none;"
+        />
+      </div>
     </div>
     <a-modal
       v-model:open="globalStore.state.showLabelInput"
@@ -107,8 +108,8 @@ import {
   StopOutlined,
 } from "@ant-design/icons-vue";
 import { useGlobalStore } from "@/stores/global";
-import { usePatrolStore } from "@/stores/patrol";
-import { ref, onBeforeUnmount, onMounted, reactive, h, watch } from "vue";
+import { usePatrolStore, usePatrolStoreToRefs } from "@/stores/patrol";
+import { onBeforeUnmount, reactive, h, watch, ref } from "vue";
 import { type GridMap, type Map, type GridPlan } from "@/typings";
 import type { TableOptions } from "@/typings/component";
 import type { MessageData } from "@foxglove/ws-protocol";
@@ -116,6 +117,7 @@ import DrawManage from "@/utils/draw";
 import { message, notification } from "ant-design-vue";
 import Patrol from "@/components/Patrol.vue";
 import VirtualWallCom from "@/components/VirtualWallCom.vue";
+import TopNav from "@/components/TopNav.vue";
 
 interface State {
   maps: Map[];
@@ -137,6 +139,7 @@ interface State {
 const foxgloveClientStore = useFoxgloveClientStore();
 const globalStore = useGlobalStore();
 const patrolStore = usePatrolStore();
+const { patroling } = usePatrolStoreToRefs();
 
 const state = reactive<State>({
   maps: [],
@@ -197,7 +200,7 @@ watch(
 );
 
 watch(
-  () => patrolStore.patroling,
+  () => patrolStore.patrolMode,
   () => {
     switchPatroling();
   },
@@ -301,13 +304,14 @@ const finishAdding = async () => {
   globalStore.setLoading(true);
   state.drawManage.subscribeCarPosition();
   state.drawManage.subscribeScanPoints();
-  if (!state.connecting && !state.crossing)
+  if (!state.connecting && !state.crossing) {
     await foxgloveClientStore.callService(
       "/tiered_nav_state_machine/switch_mode",
       {
         mode: 2,
       },
     );
+  }
   // 跨图导航
   if (state.crossing) {
     state.selectedMap = state.candidateMap;
@@ -334,6 +338,7 @@ const finishAdding = async () => {
         state.curState = STATE_MAP.NAVIGATING;
         if (state.connecting) state.curState = STATE_MAP.CONNECTING;
         state.drawManage.advertiseNavTopic();
+        state.drawManage.setPanzoomPartialMap();
         state.drawManage.navDisabled = false;
         globalStore.setLoading(false);
         state.selectedMap = state.candidateMap;
@@ -463,6 +468,7 @@ const planMsgHandler = ({
 
 // 订阅轨迹话题
 const subscribePlanTopic = () => {
+  if (state.planSubId !== -1) return;
   globalStore.setLoading(true);
   foxgloveClientStore.subscribeTopic("/plan").then((res) => {
     state.planSubId = res;
@@ -488,7 +494,7 @@ const patrolManage = () => {
     },
     component: Patrol,
     showFooter: false,
-    width: 650,
+    width: 1000,
   });
 }
 
@@ -522,10 +528,12 @@ const switchNavigation = () => {
       duration: 3,
     });
     subscribePlanTopic();
+    message.info('地图缩放拖拽功能已关闭');
   } else {
     state.drawManage.navRemoveListener();
     state.drawManage.pzAddListener();
     unSubscribePlanTopic();
+    message.info('地图缩放拖拽功能已开启');
   }
 };
 
@@ -533,6 +541,10 @@ const switchNavigation = () => {
 const pauseNav = () => {
   state.navigating = false;
   state.curState = STATE_MAP.PAUSING;
+  
+  state.marking = false;
+  patrolStore.patrolMode = false;
+  patrolStore.exitPatrol();
 };
 
 // 恢复导航
@@ -604,14 +616,15 @@ const switchMarking = () => {
     });
   } else {
     state.drawManage.labelRemoveListener();
-    patrolStore.patroling = false;
+    patrolStore.patrolMode = false;
   }
 };
 
 // 切换巡逻模式
 const switchPatroling = () => {
-  if (patrolStore.patroling) {
+  if (patrolStore.patrolMode) {
     patrolStore.openPatrol(state.drawManage);
+    subscribePlanTopic();
     notification.success({
       placement: "topRight",
       message: "开启巡逻模式",
@@ -633,6 +646,11 @@ const cancelLabel = () => {
   globalStore.closeLabelInput();
 };
 
+const stopPatrol = () => {
+  message.success('停止巡逻');
+	patrolStore.stopPatrol();
+}
+
 onBeforeUnmount(() => {
   foxgloveClientStore.callService("/tiered_nav_state_machine/switch_mode", {
     mode: 0,
@@ -642,6 +660,9 @@ onBeforeUnmount(() => {
   state.drawManage.unSubscribeCarPosition();
   state.drawManage.unSubscribeScanPoints();
   state.drawManage.unAdvertiseNavTopic();
+
+  patrolStore.patrolMode = false;
+  patrolStore.exitPatrol();
 });
 </script>
 
@@ -650,6 +671,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   gap: 15px;
 
   .view {
@@ -666,25 +688,23 @@ onBeforeUnmount(() => {
     }
   }
 
-  .config {
-    width: 35%;
-    height: 100%;
-    background: #fff;
-    overflow: auto;
-    .flex(center, center, column);
-    gap: 15px;
-
-    .btn {
-      width: 100%;
-      .flex(center, center);
+  .btn {
+    width: 100%;
+    margin-bottom: 10px;
+    
+    .btn-line {
+      .flex;
+      justify-content: initial;
       gap: 10px;
-      flex-wrap: wrap;
-      .switch {
-        .flex;
-        gap: 5px;
-      }
+      min-height: 32px;
+    }
+
+    .switch {
+      .flex;
+      gap: 15px;
     }
   }
+
 }
 
 :deep(.Table) {

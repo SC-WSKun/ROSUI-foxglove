@@ -42,9 +42,9 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    * init the client & storage channels and services
    * @param socket
    */
-  function initClient() {
+  function initClient(wsUrl: string) {
     state.client = new FoxgloveClient({
-      ws: new WebSocket("ws://10.3.51.184:8675", [FoxgloveClient.SUPPORTED_SUBPROTOCOL])
+      ws: new WebSocket(wsUrl, [FoxgloveClient.SUPPORTED_SUBPROTOCOL])
     })
     state.client.on('advertise', (channels: Channel[]) => {
       channels.forEach((channel: Channel) => {
@@ -144,7 +144,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function publishMessage(channelId: number, message: any) {
     if (!state.client) {
-      message.error('未识别到连接，请在右上角【操作】中进行连接')
+      message.error('未识别到连接，请先连接机器人')
       return
     }
     const channel = _.find(state.advertisedChannels, { id: channelId })
@@ -171,7 +171,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     payload: { [key: string]: any }
   ): Promise<any> {
     if (!state.client) {
-      message.error('未识别到连接，请在右上角【操作】中进行连接')
+      message.error('未识别到连接，请先连接机器人')
       return Promise.reject('Client not initialized!')
     }
     const srv: Service | undefined = _.find(state.services, { name: srvName })
@@ -195,16 +195,20 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
     return new Promise((resolve) => {
       // 将监听回调函数抽离的目的是避免监听未及时off造成的内存泄漏
       function serviceResponseHandler(response: any) {
-        const parseResDefinitions = parseMessageDefinition(
-          srv?.responseSchema!,
-          {
-            ros2: true
-          }
-        )
-        const reader = new MessageReader(parseResDefinitions)
-        const res = reader.readMessage(response.data)
-        resolve(res)
-        state.client?.off('serviceCallResponse', serviceResponseHandler)
+        try {
+          const parseResDefinitions = parseMessageDefinition(
+            srv?.responseSchema!,
+            {
+              ros2: true
+            }
+          )
+          const reader = new MessageReader(parseResDefinitions)
+          const res = reader.readMessage(response.data)
+          resolve(res)
+          state.client?.off('serviceCallResponse', serviceResponseHandler)
+        } catch (err) {
+          console.error(err);
+        }
       }
       state!.client!.on('serviceCallResponse', serviceResponseHandler)
     })
@@ -217,7 +221,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function advertiseTopic(channel: ClientChannelWithoutId) {
     if (!state.client) {
-      message.error('未识别到连接，请在右上角【操作】中进行连接')
+      message.error('未识别到连接，请先连接机器人')
       return
     }
     const channelId = state.client.advertise(channel)
@@ -252,7 +256,7 @@ export const useFoxgloveClientStore = defineStore('foxgloveClient', () => {
    */
   function listenMessage(callback: (...args: any) => void) {
     if (!state.client) {
-      message.error('未识别到连接，请在右上角【操作】中进行连接')
+      message.error('未识别到连接，请先连接机器人')
       return
     }
     state.client.on('message', callback)

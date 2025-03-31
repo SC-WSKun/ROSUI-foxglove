@@ -16,22 +16,7 @@ export interface IVirtualWall extends ILine {
 }
 
 export const useVirtualWallStore = defineStore('virtualWall', () => {
-	const virtualWalls: Ref<IVirtualWall[]> = ref([
-		// {
-		// 	wall_id: 345,
-		// 	x0: 1.0,
-		// 	y0: 1.0,
-		// 	x1: 2.5,
-		// 	y1: 3.5
-		// },
-		// {
-		// 	wall_id: 248,
-		// 	x0: 1.0,
-		// 	y0: 3.2,
-		// 	x1: 2.1,
-		// 	y1: 1.0
-		// },
-	]);
+	const virtualWalls: Ref<IVirtualWall[]> = ref([]);
 	const foxgloveClientStore = useFoxgloveClientStore();
 	const mapName = ref('');
 
@@ -49,7 +34,6 @@ export const useVirtualWallStore = defineStore('virtualWall', () => {
 	}
 
 	async function addVW(walls: ILine[]) {
-		console.log('addVW', mapName.value);
 		if (walls.length === 0) return message.warning('未绘制虚拟墙!');
 		const res = await foxgloveClientStore.callService(
 			'/nav2_extended/add_virtual_walls',

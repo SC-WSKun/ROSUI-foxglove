@@ -14,7 +14,7 @@ import type { MessageData } from "@foxglove/ws-protocol";
 import _ from "lodash";
 import dict from "@/dict";
 import { useGlobalStore } from "@/stores/global";
-import { type PatrolPoint, type PatrolTopicMsg, usePatrolStore } from "@/stores/patrol";
+import { type PatrolPoint, type PatrolTopicMsg, type StartPatrolReq, usePatrolStore } from "@/stores/patrol";
 import { VirtualWall } from "@/utils/virtualWall";
 
 export default class DrawManage {
@@ -58,7 +58,12 @@ export default class DrawManage {
     y: number;
     yaw: number;
   } | null = null;
+  carPixelPose: {
+    x: number;
+    y: number;
+  } | null = null;
   carRenderLock: boolean = false;
+  clearCurveTimer: any = null;
 
   navDisabled: boolean = false;
   labelDisabled: boolean = false;
@@ -170,8 +175,10 @@ export default class DrawManage {
     // imgWrap包含map和arrow
     if (!this.imgWrap) {
       const tempEl = document.getElementById('mapImgWrap');
-      if (!tempEl) this.imgWrap = document.createElement("div");
-      else this.imgWrap = tempEl;
+      if (!tempEl) {
+        this.imgWrap = document.createElement("div");
+        this.imgWrap.id = "mapImgWrap";
+      } else this.imgWrap = tempEl;
       this.imgWrap.style.position = "relative";
       wrap.appendChild(this.imgWrap);
     }
@@ -256,6 +263,13 @@ export default class DrawManage {
 
   // 轨迹曲线
   drawCurve(data: GridPlan) {
+    if (this.clearCurveTimer) clearTimeout(this.clearCurveTimer);
+    // 2s内没接收到轨迹消息则清除轨迹
+    this.clearCurveTimer = setTimeout(() => {
+      if (!this.planCurveCanvas) return;
+      const ctx = this.planCurveCanvas.getContext('2d')!;
+      ctx.clearRect(0, 0, this.planCurveCanvas.width, this.planCurveCanvas.height);
+    }, 2000);
     if (!this.mapInfo || !this.imgWrap || !this.img) return;
     if (!this.planCurveCanvas) {
       this.planCurveCanvas = document.createElement("canvas");
@@ -304,10 +318,10 @@ export default class DrawManage {
     ctx.stroke();
   }
 
-  startPatrol(loopCount: number = 1) {
+  startPatrol(params: StartPatrolReq) {
     if (this.imgWrap && this.patrolWrap) this.imgWrap.removeChild(this.patrolWrap);
     this.patrolWrap = null;
-    this.patrolStore?.patrol(loopCount);
+    this.patrolStore?.patrol(params);
   }
 
   exitPatrolMode() {
@@ -358,6 +372,7 @@ export default class DrawManage {
 
   // 为画布添加缩放和平移拖拽功能
   setPanzoom(imgWrap: HTMLElement) {
+    console.log('carpos', this.carPose?.x, this.carPose?.y);
     this.panzoomIns = Panzoom(imgWrap, {
       // 限制缩放范围
       minScale: 0.8,
@@ -368,6 +383,15 @@ export default class DrawManage {
 
     // 自定义监听拖拽事件
     this.pzAddListener();
+  }
+
+  setPanzoomPartialMap() {
+    if (!this.panzoomIns || !this.carPixelPose || !this.img) return;
+    const offsetX = (this.img.width / 2) - this.carPixelPose.x;
+    const offsetY = (this.img.height / 2) - this.carPixelPose.y;
+    // 负数：往左/上拖动，及地图右下角
+    this.panzoomIns.pan(offsetX, offsetY);
+    this.panzoomIns.zoom(1.5);
   }
 
   // 重置画布状态
@@ -595,11 +619,6 @@ export default class DrawManage {
     if (this.pointsWrap) this.pointsWrap.innerHTML = "";
   }
 
-  // 巡逻模式更新小车坐标
-  patrolUpdateCarPose(parseData: PatrolTopicMsg) {
-    
-  }
-
   // 在地图上更新小车位置
   updateCarPose() {
     if (!this.carPose || !this.mapInfo || !this.imgWrap) return;
@@ -618,6 +637,10 @@ export default class DrawManage {
     this.car.style.left = `${x}px`;
     this.car.style.top = `${this.imgWrap.offsetHeight - y}px`;
     this.car.style.transform = `rotate(${-this.carPose.yaw}deg)`;
+    this.carPixelPose = {
+      x,
+      y: this.imgWrap.offsetHeight - y,
+    };
     this.imgWrap?.appendChild(this.car);
   }
 
@@ -720,15 +743,25 @@ export default class DrawManage {
 
   // 清空画布
   clear() {
-    this.imgWrap?.remove();
-    this.imgWrap = null;
+    if (this.imgWrap) {
+      this.imgWrap.style.height = "0";
+      this.imgWrap.style.width = "0";
+    }
+    if (this.img) {
+      this.img.remove();
+      this.img = null;
+    }
+    if (this.pointsWrap) {
+      this.pointsWrap.remove();
+      this.pointsWrap = null;
+    }
     this.pzRemoveListener();
+    this.resetPanzoom();
     this.panzoomIns = null;
   }
 
   // 添加标签交互监听
   labelAddListener() {
-    console.log("add label method listener");
     this.pzRemoveListener();
     this.drawLabel();
     this.labelWrap?.addEventListener("mousedown", this.labelHandleMousedown);
@@ -737,7 +770,8 @@ export default class DrawManage {
 
   // 移除标签交互监听
   labelRemoveListener() {
-    this.labelWrap?.addEventListener("mousedown", this.labelHandleMousedown);
+    this.pzAddListener();
+    this.labelWrap?.removeEventListener("mousedown", this.labelHandleMousedown);
     this.labelWrap?.removeEventListener("mouseup", this.labelHandleMouseup);
     if (this.imgWrap && this.labelWrap) this.imgWrap.removeChild(this.labelWrap);
     this.labelWrap = null;

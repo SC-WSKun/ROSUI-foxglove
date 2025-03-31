@@ -2,12 +2,12 @@ import type { Config } from '@/typings'
 
 export default [
   {
-    label: '建图',
+    label: '创建地图',
     key: 'build',
     path: '/dashboard/build'
   },
   {
-    label: '导航',
+    label: '自主导航',
     key: 'navigation',
     path: '/dashboard/navigation'
   },
