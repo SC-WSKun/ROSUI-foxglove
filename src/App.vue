@@ -1,16 +1,10 @@
 <template>
-  <a-config-provider
-    :theme="{
-      token: {
-        colorPrimary: '#5b63d3'
-      }
-    }"
-    :locale="zhCN"
-  >
-    <a-spin
-      :spinning="globalStore.state.loading"
-      :tip="globalStore.state.loadingTip"
-    >
+  <a-config-provider :theme="{
+    token: {
+      colorPrimary: '#5b63d3'
+    }
+  }" :locale="zhCN">
+    <a-spin :spinning="globalStore.state.loading" :tip="globalStore.state.loadingTip">
     </a-spin>
     <Modal ref="modalRef" />
     <RouterView />
@@ -29,7 +23,7 @@ const globalStore = useGlobalStore()
 const rtcClientStore = useRtcClientStore()
 
 const modalRef: any = ref(null)
-let timer: NodeJS.Timeout | null = null
+let timer: any = null
 
 onMounted(() => {
   timer = setInterval(() => {
