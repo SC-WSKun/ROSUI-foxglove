@@ -21,7 +21,7 @@
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { RouterView } from 'vue-router'
 import { useGlobalStore } from './stores/global'
-import { nextTick, onBeforeUnmount, onMounted, ref, type Ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, } from 'vue'
 import { useRtcClientStore } from './stores/rtcClient'
 
 
