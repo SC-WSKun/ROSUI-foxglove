@@ -67,7 +67,12 @@ watch(
   }
 )
 
-// 处理移动事件
+/**
+ * 处理移动事件
+ * 这里后退需要对角速度取反，这样才符合摇杆交互常识
+ * @param linearSpeed 线速度
+ * @param angularSpeed 角速度
+ */
 const handleMove = (linearSpeed: number, angularSpeed: number) => {
   foxgloveClientStore.publishMessage(state.channelId!, {
     linear: {
@@ -78,7 +83,7 @@ const handleMove = (linearSpeed: number, angularSpeed: number) => {
     angular: {
       x: 0,
       y: 0,
-      z: angularSpeed
+      z: linearSpeed > 0 ? angularSpeed : -angularSpeed
     }
   })
 }
